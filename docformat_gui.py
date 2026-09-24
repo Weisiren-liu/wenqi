@@ -22,7 +22,9 @@ SCRIPT_DIR = PROJECT_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from scripts.analyzer import analyze_punctuation, analyze_numbering, analyze_paragraph_format, analyze_font
-from scripts.formatter import format_document, PRESETS, DEFAULT_PAGE_NUMBER_OFFSET_MM
+from scripts.formatter import (
+    format_document, PRESETS, DEFAULT_PAGE_NUMBER_OFFSET_MM, get_config_dir,
+)
 
 
 _DND_DISABLED_REASON = ""
@@ -360,7 +362,7 @@ class AboutDialog(tk.Toplevel):
 # ===== 配置管理 =====
 import json
 
-def _migrate_legacy_config(config_dir):
+def _migrate_legacy_config_file(config_dir):
     """把旧版放在 exe 同目录的配置迁移到新的用户目录。
 
     仅当新目录还没有配置、且旧目录确实存在配置时才迁移，保证现有用户升级后不丢设置。
@@ -387,28 +389,14 @@ def _migrate_legacy_config(config_dir):
 
 
 def _get_config_dir():
-    """获取配置文件存放目录（确保可写）"""
-    if sys.platform == 'darwin':
-        # macOS 打包后：.app 包内部只读，配置文件放到用户目录
-        config_dir = Path.home() / 'Library' / 'Application Support' / 'DocFormatter'
-    elif sys.platform == 'win32':
-        # Windows 打包后：写到 %APPDATA%。
-        # 不再写在 exe 同目录——一旦程序被装进 Program Files 等只读位置，
-        # 写配置就会失败，逼用户以管理员身份运行；而管理员模式下系统会拦截
-        # 普通权限程序（资源管理器）拖来的文件，导致拖拽功能失效。
-        base = os.environ.get('APPDATA') or str(Path.home() / 'AppData' / 'Roaming')
-        config_dir = Path(base) / 'DocFormatter'
-    else:
-        # Linux 打包后：遵循 XDG 规范，避免同样的只读目录 / 权限问题
-        base = os.environ.get('XDG_CONFIG_HOME') or str(Path.home() / '.config')
-        config_dir = Path(base) / 'DocFormatter'
+    """获取配置文件存放目录。
 
-    try:
-        config_dir.mkdir(parents=True, exist_ok=True)
-    except Exception:
-        # 极端情况下用户目录不可写，退回到 exe 同目录，至少不致崩溃
-        config_dir = Path(sys.executable).parent
-    _migrate_legacy_config(config_dir)
+    目录解析的唯一实现在 scripts.formatter.get_config_dir()（依赖方向保持
+    GUI → formatter）；这里只负责把旧版放在 exe 同目录的配置文件搬进新目录，
+    搬完后两侧读到的一定是同一个文件。
+    """
+    config_dir = get_config_dir()
+    _migrate_legacy_config_file(config_dir)
     return config_dir
 
 CONFIG_FILE = _get_config_dir() / "custom_settings.json"

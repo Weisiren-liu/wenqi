@@ -268,17 +268,45 @@ def _adapt_fonts_for_platform(preset):
 # 字号对照：二号=22pt，三号=16pt，小四=12pt
 # 2字符缩进 = 2 × 16pt = 32pt（三号字）
 
+# ===== 配置文件目录（唯一实现，GUI 侧 docformat_gui._get_config_dir 也从这里取） =====
+def get_config_dir():
+    """获取配置文件存放目录（确保可写）。
+
+    配置路径解析的唯一实现。GUI 与 formatter 两侧都必须调用它，
+    任何一侧单独写平台判断都会导致两边读到不同的文件。
+    """
+    if sys.platform == 'darwin':
+        # macOS 打包后：.app 包内部只读，配置文件放到用户目录
+        config_dir = Path.home() / 'Library' / 'Application Support' / 'DocFormatter'
+    elif sys.platform == 'win32':
+        # Windows 打包后：写到 %APPDATA%。
+        # 不再写在 exe 同目录——一旦程序被装进 Program Files 等只读位置，
+        # 写配置就会失败，逼用户以管理员身份运行；而管理员模式下系统会拦截
+        # 普通权限程序（资源管理器）拖来的文件，导致拖拽功能失效。
+        base = os.environ.get('APPDATA') or str(Path.home() / 'AppData' / 'Roaming')
+        config_dir = Path(base) / 'DocFormatter'
+    else:
+        # Linux 打包后：遵循 XDG 规范，避免同样的只读目录 / 权限问题
+        base = os.environ.get('XDG_CONFIG_HOME') or str(Path.home() / '.config')
+        config_dir = Path(base) / 'DocFormatter'
+
+    try:
+        config_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        # 极端情况下用户目录不可写，退回到 exe 同目录，至少不致崩溃
+        config_dir = Path(sys.executable).parent
+    return config_dir
+
+
+def get_config_file():
+    """配置文件（custom_settings.json）的完整路径。"""
+    return get_config_dir() / "custom_settings.json"
+
+
 # 自定义配置文件路径
 def load_custom_preset():
     """加载自定义预设"""
-    if sys.platform == 'darwin':
-        custom_config_file = Path.home() / 'Library' / 'Application Support' / 'DocFormatter' / "custom_settings.json"
-    elif sys.platform == 'win32':
-        base = os.environ.get('APPDATA') or str(Path.home() / 'AppData' / 'Roaming')
-        custom_config_file = Path(base) / 'DocFormatter' / "custom_settings.json"
-    else:
-        base = os.environ.get('XDG_CONFIG_HOME') or str(Path.home() / '.config')
-        custom_config_file = Path(base) / 'DocFormatter' / "custom_settings.json"
+    custom_config_file = get_config_file()
 
     legacy_config_file = Path(__file__).parent.parent / "custom_settings.json"
     if not custom_config_file.exists() and legacy_config_file.exists():
