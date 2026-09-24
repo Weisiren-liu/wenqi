@@ -13,10 +13,20 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def test_custom_settings_expose_each_heading_font_choice_in_the_ui():
-    source = (PROJECT_ROOT / "docformat_gui.py").read_text(encoding="utf-8")
+    """每级标题在内联参数表里有独立的中/英文字体格（逐行独立编辑）。"""
+    import docformat_gui as gui
+
+    element_keys = [key for key, _label in gui.ELEMENTS]
     for level in range(1, 5):
-        assert f"self.h{level}_font_var = tk.StringVar()" in source
-        assert f"self.h{level}_font_en_var = tk.StringVar()" in source
+        assert f"heading{level}" in element_keys
+
+    column_fields = [field for field, _label, _width in gui.ElementTable.COLUMNS]
+    assert "font_cn" in column_fields
+    assert "font_en" in column_fields
+
+    # 联动派生规则（正文字体写入其他元素、英数字体全局）已按定稿移除
+    source = (PROJECT_ROOT / "docformat_gui.py").read_text(encoding="utf-8")
+    assert "BODY_FONT_GROUP" not in source
 
 
 def test_each_heading_writes_chinese_and_english_fonts_to_ooxml(tmp_path):

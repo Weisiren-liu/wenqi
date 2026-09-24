@@ -334,9 +334,11 @@ def load_custom_preset():
                     for preset in presets:
                         if preset.get('id') == active_id:
                             return preset
-                    # active_preset_id 允许指向内置 id（注册表统一后的语义）
+                    # active_preset_id 允许指向固定起始格式 id（注册表统一后的语义）
                     if active_id in PRESETS:
                         return deepcopy(PRESETS[active_id])
+                    if active_id == 'custom':
+                        return deepcopy(CUSTOM_PRESET_BASE)
                 return presets[0] if presets else None
             return data
         except Exception:
@@ -344,15 +346,24 @@ def load_custom_preset():
     return None
 
 
-def _merge_preset_settings(base, overrides):
-    """递归合并预设配置，用于测试或临时覆盖少量字段。"""
+def merge_preset_settings(base, overrides):
+    """递归合并预设配置（深合并，overrides 的叶值覆盖 base）。
+
+    既是「用少量字段临时覆盖预设」的工具，也是「显示值 = 预设值 ⊕ 覆盖值」
+    的唯一合并实现：GUI 侧 preset_overrides 经它合成生效 preset，
+    UI 显示与 format_document 处理结果因此永远同源。
+    """
     merged = deepcopy(base)
     for key, value in (overrides or {}).items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            merged[key] = _merge_preset_settings(merged[key], value)
+            merged[key] = merge_preset_settings(merged[key], value)
         else:
             merged[key] = deepcopy(value)
     return merged
+
+
+# 兼容旧名字
+_merge_preset_settings = merge_preset_settings
 
 # 内置预设定义的唯一来源。
 # GUI 侧的预设注册表（docformat_gui._inject_builtin_presets）由此生成只读条目
@@ -513,6 +524,87 @@ PRESETS = {
         'attachment': {'font_cn': '宋体', 'font_en': 'Times New Roman', 'size': 14, 'bold': False, 'align': 'justify', 'indent': 0},
         'closing': {'font_cn': '宋体', 'font_en': 'Times New Roman', 'size': 14, 'bold': False, 'align': 'left', 'indent': 28},
     },
+}
+
+# 「自定义格式」起始格式的基值（出厂即公文参数，用户在上面微调）。
+# 与 PRESETS 并列为预设注册表的固定条目来源：id 沿用 'custom'，
+# 是用户格式「从空开始攒」之前的默认起点。GUI 侧以
+# docformat_gui.DEFAULT_CUSTOM_SETTINGS 引用同一对象。
+CUSTOM_PRESET_BASE = {
+    'name': '自定义格式',
+    'page': {'top': 3.7, 'bottom': 3.5, 'left': 2.8, 'right': 2.6},
+    'title': {
+        'font_cn': '方正小标宋简体', 'font_en': 'Times New Roman',
+        'size': 22, 'bold': False, 'align': 'center', 'indent': 0,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'recipient': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'left', 'indent': 0,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'heading1': {
+        'font_cn': '黑体', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'heading2': {
+        'font_cn': '楷体_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'heading3': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': True, 'align': 'left', 'indent': 32,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'heading4': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'body': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'justify',
+        'indent': 32, 'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'signature': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'right', 'indent': 0,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'date': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'right', 'indent': 0,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'attachment': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'justify', 'indent': 0,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'closing': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
+        'line_spacing': 28, 'space_before': 0, 'space_after': 0
+    },
+    'table': {
+        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
+        'size': 12, 'bold': False, 'line_spacing': 22,
+        'first_line_indent': 0, 'header_bold': True, 'smart_align': False
+    },
+    'space_handling': 'remove_all',
+    'first_line_bold': False,
+    'bold_serial': True,
+    'split_heading_at_punct': False,
+    'deep_clean': False,
+    'page_number': True,
+    'page_number_font': '宋体',
+    'page_number_size': 14,
+    'page_number_style': 'dash',
+    'page_number_position': 'outside',
+    'page_number_offset_mm': DEFAULT_PAGE_NUMBER_OFFSET_MM,
+    'replace_existing_page_number': True,
 }
 
 

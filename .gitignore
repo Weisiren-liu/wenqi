@@ -40,3 +40,6 @@ ai_glossary.txt
 
 #codeX说让加了一行，但我也不知道加的东西是什么意思
 ._*
+
+# P2 GUI 自检的截图产物（prototype/_check_p2_gui.py 运行时生成）
+prototype/_p2_shots/

@@ -66,21 +66,22 @@ def test_load_injects_builtin_presets_as_readonly_entries(tmp_path, monkeypatch)
 
     config = docformat_gui.load_custom_settings()
     ids = [p.get("id") for p in config["presets"]]
-    assert ids[:3] == ["official", "academic", "legal"]
+    # P2：注册表 = 4 个固定起始格式（内置三个 + 自定义格式）+ 用户格式（出厂为空）
+    assert ids[:4] == ["official", "academic", "legal", "custom"]
+    assert not any(not p["is_builtin"] for p in config["presets"][:4])
 
-    for entry in config["presets"][:3]:
-        assert entry["is_builtin"] is True
-    # 注入的内置条目与 formatter.PRESETS 定义逐字一致（不合并默认值，不改变格式化行为）
+    # 注入的固定条目与代码定义逐字一致（不合并默认值，不改变格式化行为）
     for builtin_id in ("official", "academic", "legal"):
         entry = docformat_gui.get_preset_by_id(config, builtin_id)
         definition_keys = set(PRESETS[builtin_id]) - {"id", "is_builtin"}
         for key in definition_keys:
             assert entry[key] == PRESETS[builtin_id][key]
+    custom = docformat_gui.get_preset_by_id(config, "custom")
+    assert custom["body"] == formatter.CUSTOM_PRESET_BASE["body"]
 
-    # 全新安装：注册表 = 3 内置 + 1 用户，且默认选中的仍是用户项（自定义格式）
-    user = [p for p in config["presets"] if not p["is_builtin"]]
-    assert len(user) == 1
-    assert config["active_preset_id"] == user[0]["id"]
+    # 全新安装：用户格式从空开始攒，默认选中「自定义格式」
+    assert [p for p in config["presets"] if not p["is_builtin"]] == []
+    assert config["active_preset_id"] == "custom"
 
 
 def test_save_strips_builtin_entries_from_user_config(tmp_path, monkeypatch):
@@ -92,10 +93,9 @@ def test_save_strips_builtin_entries_from_user_config(tmp_path, monkeypatch):
 
     on_disk = json.loads(config_file.read_text(encoding="utf-8"))
     assert on_disk["schema_version"] == 3
+    assert on_disk["presets"] == []          # 固定起始格式不落盘，用户格式出厂为空
     assert not any(p.get("is_builtin") for p in on_disk["presets"])
-    assert not any(p.get("id") in ("official", "academic", "legal")
-                   for p in on_disk["presets"])
-    assert "builtin_overrides" in on_disk
+    assert "preset_overrides" in on_disk
 
     # 保存不改调用方的内存注册表
     assert docformat_gui.get_preset_by_id(config, "official") is not None

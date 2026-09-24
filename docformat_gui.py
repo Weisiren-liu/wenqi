@@ -24,6 +24,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from scripts.analyzer import analyze_punctuation, analyze_numbering, analyze_paragraph_format, analyze_font
 from scripts.formatter import (
     format_document, PRESETS, DEFAULT_PAGE_NUMBER_OFFSET_MM, get_config_dir,
+    merge_preset_settings, CUSTOM_PRESET_BASE,
 )
 
 
@@ -456,93 +457,27 @@ FONT_SIZES = [
     ('四号', 14), ('小四', 12), ('五号', 10.5), ('小五', 9),
 ]
 
-DEFAULT_CUSTOM_SETTINGS = {
-    'name': '自定义格式',
-    'page': {'top': 3.7, 'bottom': 3.5, 'left': 2.8, 'right': 2.6},
-    'title': {
-        'font_cn': '方正小标宋简体', 'font_en': 'Times New Roman',
-        'size': 22, 'bold': False, 'align': 'center', 'indent': 0,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'recipient': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'left', 'indent': 0,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'heading1': {
-        'font_cn': '黑体', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'heading2': {
-        'font_cn': '楷体_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'heading3': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': True, 'align': 'left', 'indent': 32,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'heading4': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'body': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'justify',
-        'indent': 32, 'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'signature': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'right', 'indent': 0,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'date': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'right', 'indent': 0,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'attachment': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'justify', 'indent': 0,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'closing': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 16, 'bold': False, 'align': 'left', 'indent': 32,
-        'line_spacing': 28, 'space_before': 0, 'space_after': 0
-    },
-    'table': {
-        'font_cn': '仿宋_GB2312', 'font_en': 'Times New Roman',
-        'size': 12, 'bold': False, 'line_spacing': 22,
-        'first_line_indent': 0, 'header_bold': True, 'smart_align': False
-    },
-    'space_handling': 'remove_all',
-    'first_line_bold': False,
-    'bold_serial': True,
-    'split_heading_at_punct': False,
-    'deep_clean': False,
-    'page_number': True,
-    'page_number_font': '宋体',
-    'page_number_size': 14,
-    'page_number_style': 'dash',
-    'page_number_position': 'outside',
-    'page_number_offset_mm': DEFAULT_PAGE_NUMBER_OFFSET_MM,
-    'replace_existing_page_number': True,
-}
+# 「自定义格式」起始格式的基值（出厂即公文参数，用户在上面微调）。
+# 唯一实现在 scripts.formatter.CUSTOM_PRESET_BASE —— formatter 侧的旧调用路径
+# 也要能解析 active='custom'，定义放那边避免循环依赖。
+DEFAULT_CUSTOM_SETTINGS = CUSTOM_PRESET_BASE
 
 
 # 配置文件 schema 版本
 #   2 = v1.8.0 预设列表结构
-#   3 = 预设注册表统一（docs/ARCHITECTURE.md 3.1/3.2）：
-#       内置预设加载时注入注册表、持久化时过滤；active_preset_id 允许指向内置 id
+#   3 = 预设注册表统一（docs/ARCHITECTURE.md 3.1/3.2）：固定起始格式加载时注入
+#       注册表、持久化时过滤；active_preset_id 允许指向固定起始格式 id；
+#       覆盖值（活链接模型）持久化在 preset_overrides（docs/ARCHITECTURE.md 第 9 节）
 CONFIG_SCHEMA_VERSION = 3
 PAGE_NUMBER_CONFIG_VERSION = 1
 
-# 内置只读预设的 id（与 PRESETS dict key 对应）
+# 内置只读预设的 id（与 PRESETS dict key 对应，UI 上带「内置」徽标）
 BUILTIN_PRESET_IDS = ('official', 'academic', 'legal')
+
+# 注册表里的固定起始格式：内置三个 + 「自定义格式」。
+# 出厂只有这 4 个起点（用户格式从空开始攒），定义只来自代码 ——
+# 前三个在 formatter.PRESETS，'custom' 在 formatter.CUSTOM_PRESET_BASE。
+STARTING_FORMAT_IDS = ('official', 'academic', 'legal', 'custom')
 
 
 def _make_default_user_preset():
@@ -556,39 +491,43 @@ def _make_default_user_preset():
 
 
 def _make_empty_config():
-    """生成一份全新的、空白的配置文件结构。"""
+    """生成一份全新的、空白的配置文件结构。
+
+    出厂只有 4 个固定起始格式（STARTING_FORMAT_IDS），用户格式从空开始攒，
+    默认选中「自定义格式」。
+    """
     return {
         'schema_version': CONFIG_SCHEMA_VERSION,
-        'active_preset_id': None,   # 当前选中的预设 id（可指向内置 id）
+        'active_preset_id': 'custom',   # 当前选中的预设 id（固定起始格式或用户 uuid）
         'page_number_config_version': PAGE_NUMBER_CONFIG_VERSION,
-        'presets': [_make_default_user_preset()],
-        'builtin_overrides': {},    # 预留：用户对内置预设的字段级覆盖（P2 落地）
+        'presets': [],
+        'preset_overrides': {},   # 覆盖值：{预设 id: {键: {字段: 值}}}（ARCHITECTURE 第 9 节）
     }
 
 
 def _inject_builtin_presets(config):
-    """把内置预设注入预设注册表（只读条目，加载时注入、持久化时过滤）。
+    """把固定起始格式注入预设注册表（只读条目，加载时注入、持久化时过滤）。
 
-    内置定义只来自 scripts.formatter.PRESETS（唯一来源），这里只附加注册表元数据
-    （id / is_builtin），不合并任何默认值 —— 保证经注册表取到的内置预设与直接用
-    PRESETS 格式化的结果完全一致。内置条目排在用户条目前面。
+    定义只来自代码（formatter.PRESETS / formatter.CUSTOM_PRESET_BASE，唯一来源），
+    这里只附加注册表元数据（id / is_builtin），不合并任何默认值 —— 保证经注册表
+    取到的值与定义逐字一致。固定条目排在用户条目前面。
     """
     import copy
     presets = [p for p in config.get('presets', []) if isinstance(p, dict)]
     existing_ids = {p.get('id') for p in presets}
     entries = []
-    for builtin_id in BUILTIN_PRESET_IDS:
-        definition = PRESETS.get(builtin_id)
+    for preset_id in STARTING_FORMAT_IDS:
+        definition = CUSTOM_PRESET_BASE if preset_id == 'custom' else PRESETS.get(preset_id)
         if not definition:
             continue
-        if builtin_id in existing_ids:
-            # 用户预设与内置 id 冲突：以用户项优先并告警（docs/ARCHITECTURE.md 第 5 节）
-            print(f"[警告] 用户预设 id 与内置预设冲突（{builtin_id}），以用户项为准")
+        if preset_id in existing_ids:
+            # 用户预设与固定起始格式 id 冲突：以用户项优先并告警（docs/ARCHITECTURE.md 第 5 节）
+            print(f"[警告] 用户预设 id 与固定起始格式冲突（{preset_id}），以用户项为准")
             continue
         entry = copy.deepcopy(definition)
-        entry['id'] = builtin_id
+        entry['id'] = preset_id
         entry['is_builtin'] = True
-        entry.setdefault('name', builtin_id)
+        entry.setdefault('name', preset_id)
         entries.append(entry)
     config['presets'] = entries + presets
 
@@ -668,8 +607,8 @@ def _ensure_page_number_config(config):
 def load_custom_settings():
     """加载用户自定义设置（schema 2/3），并修复旧配置缺失的 active preset。
 
-    schema 3 起为统一预设注册表：内置预设（is_builtin）在这里注入、保存时被过滤，
-    永不写入用户配置；active_preset_id 允许指向内置 id。
+    schema 3 起为统一预设注册表：固定起始格式（is_builtin）在这里注入、保存时被
+    过滤，永不写入用户配置；active_preset_id 可指向固定起始格式 id 或用户 uuid。
     """
     if not CONFIG_FILE.exists():
         config = _make_empty_config()
@@ -689,36 +628,36 @@ def load_custom_settings():
 
     _ensure_page_number_config(config)
     presets = config.get('presets') or []
-    if not presets:
-        presets = [_make_default_user_preset()]
+    # 出厂用户格式从空开始攒（docs/ARCHITECTURE.md 3.3 / HANDOFF 已定 5），
+    # 不再自动补默认用户预设 —— 旧配置里已有的用户预设照常保留。
 
     merged_presets = []
     for preset in presets:
         merged = _merge_settings(DEFAULT_CUSTOM_SETTINGS, preset)
         merged['id'] = preset.get('id') or str(uuid.uuid4())
         merged['name'] = preset.get('name') or '我的自定义格式'
-        # 磁盘上的条目一律按用户项处理（内置项只在加载时注入，不会被持久化）
+        # 磁盘上的条目一律按用户项处理（固定起始格式只在加载时注入，不会被持久化）
         merged['is_builtin'] = False
         _ensure_page_number_defaults(merged)
         merged_presets.append(merged)
 
     config['schema_version'] = CONFIG_SCHEMA_VERSION
     config['presets'] = merged_presets
-    config.setdefault('builtin_overrides', {})
+    config.setdefault('preset_overrides', {})
     _inject_builtin_presets(config)
 
-    # active_preset_id 允许指向内置 id；失配时回退第一份用户预设（默认选中语义不变）
+    # active_preset_id 允许指向固定起始格式 id；失配时回退「自定义格式」
     active_id = config.get('active_preset_id')
     registry_ids = {p.get('id') for p in config['presets']}
     if not active_id or active_id not in registry_ids:
-        config['active_preset_id'] = merged_presets[0].get('id')
+        config['active_preset_id'] = 'custom'
     return config
 
 
 def save_custom_settings(config):
     """保存配置文件。
     
-    内置预设条目（is_builtin）在写入前剥离 —— 它们只存在于内存注册表
+    固定起始格式条目（is_builtin）在写入前剥离 —— 它们只存在于内存注册表
     （加载时注入），持久化会污染用户配置、且随代码演进产生冲突。
 
     Args:
@@ -739,7 +678,7 @@ def save_custom_settings(config):
                 'schema_version': CONFIG_SCHEMA_VERSION,
                 'active_preset_id': preset['id'],
                 'presets': [preset],
-                'builtin_overrides': {},
+                'preset_overrides': {},
             }
 
         config = dict(config)
@@ -752,7 +691,7 @@ def save_custom_settings(config):
         if user_presets and not config.get('active_preset_id'):
             config['active_preset_id'] = user_presets[0].get('id')
         config['presets'] = user_presets
-        config.setdefault('builtin_overrides', {})
+        config.setdefault('preset_overrides', {})
 
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
@@ -762,7 +701,7 @@ def save_custom_settings(config):
 
 
 def get_preset_by_id(config, preset_id):
-    """按 id 从预设注册表（内置 + 用户）取条目，找不到返回 None。"""
+    """按 id 从预设注册表（固定起始格式 + 用户）取条目，找不到返回 None。"""
     for p in config.get('presets', []):
         if isinstance(p, dict) and p.get('id') == preset_id:
             return p
@@ -770,25 +709,127 @@ def get_preset_by_id(config, preset_id):
 
 
 def get_active_preset(config):
-    """从预设注册表中取出 active_preset_id 指向的预设（内置 / 用户均可）。
+    """从预设注册表中取出 active_preset_id 指向的预设（固定起始格式 / 用户均可）。
 
-    找不到时回退第一份用户预设，再不行返回新建的默认预设。
+    找不到时回退「自定义格式」，再不行回退第一份用户预设。
     """
     presets = config.get('presets', [])
     active_id = config.get('active_preset_id')
     active = get_preset_by_id(config, active_id) if active_id else None
     if active is not None:
         return active
+    custom = get_preset_by_id(config, 'custom')
+    if custom is not None:
+        return custom
     for p in presets:
         if isinstance(p, dict) and not p.get('is_builtin'):
             return p
-    if presets:
-        return presets[0]
     return _make_default_user_preset()
 
 
 # 旧名字，保留给既有调用方/测试
 get_active_user_preset = get_active_preset
+
+
+# ===== 覆盖值：活链接 + 覆盖值模型（docs/ARCHITECTURE.md 第 9 节定稿） =====
+#
+#   显示值 = 预设值 ⊕ 覆盖值
+#
+# preset_overrides 结构：{预设 id: {键: {字段: 值}}}。
+# 键含元素名（title/body/…）与 page/table 等嵌套键；字段级只记被改的格子。
+# 对固定起始格式与用户格式统一成立：前者的基准是代码定义，后者的基准是它
+# 保存时的完整快照。↺ 恢复本行 = 删键，↺ 恢复全部 = 删 preset_overrides[id]。
+
+def get_preset_overrides(config, preset_id):
+    """取某预设的字段级覆盖值：{键: {字段: 值}}。"""
+    return (config.get('preset_overrides') or {}).get(preset_id) or {}
+
+
+def get_effective_preset(config, preset_id):
+    """生效 preset = 预设基准 ⊕ preset_overrides[preset_id]。
+
+    UI 显示与 format_document 处理用的是同一份结果，永不脱节。
+    """
+    base = get_preset_by_id(config, preset_id)
+    if base is None:
+        return None
+    return merge_preset_settings(base, get_preset_overrides(config, preset_id))
+
+
+def set_preset_override(config, preset_id, key, field, value):
+    """记录一个覆盖值（字段级；field 为 None 表示整键标量，如行为开关）。
+
+    值与基准一致时不记覆盖，并顺手清掉已有覆盖 ——「已改动」标记
+    始终只反映对基准的真实偏离。
+    """
+    base = get_preset_by_id(config, preset_id) or {}
+    base_node = base.get(key)
+    if field is None:
+        base_value = base_node
+    else:
+        base_value = base_node.get(field) if isinstance(base_node, dict) else None
+
+    overrides = config.setdefault('preset_overrides', {})
+    entry = overrides.setdefault(preset_id, {})
+
+    if value == base_value:
+        if field is None:
+            entry.pop(key, None)
+        else:
+            node = entry.get(key)
+            if isinstance(node, dict):
+                node.pop(field, None)
+                if not node:
+                    entry.pop(key, None)
+        if not entry:
+            overrides.pop(preset_id, None)
+        return
+
+    if field is None:
+        entry[key] = value
+    else:
+        node = entry.get(key)
+        if not isinstance(node, dict):
+            node = {}
+            entry[key] = node
+        node[field] = value
+
+
+def clear_preset_override_row(config, preset_id, key):
+    """↺ 恢复本行：删掉该键的全部覆盖值。"""
+    overrides = config.setdefault('preset_overrides', {})
+    entry = overrides.get(preset_id)
+    if not entry:
+        return
+    entry.pop(key, None)
+    if not entry:
+        overrides.pop(preset_id, None)
+
+
+def clear_preset_overrides(config, preset_id):
+    """↺ 恢复全部：删掉该预设的全部覆盖值。"""
+    overrides = config.get('preset_overrides') or {}
+    overrides.pop(preset_id, None)
+
+
+def save_as_new_preset(config, source_id, name):
+    """「＋ 存为新格式」：把当前生效值快照成新的用户格式，并清空源格式的覆盖值。
+
+    快照 = 基准 ⊕ 覆盖值的完整 dict，新格式的基准就是用户眼前这套值；
+    源格式的覆盖值条目随即删除（改动已折进新格式）。
+    """
+    effective = get_effective_preset(config, source_id)
+    if effective is None:
+        return None
+    import copy
+    preset = copy.deepcopy(effective)
+    preset['id'] = str(uuid.uuid4())
+    preset['name'] = name or '我的格式'
+    preset['is_builtin'] = False
+    config.setdefault('presets', []).append(preset)
+    config['active_preset_id'] = preset['id']
+    clear_preset_overrides(config, source_id)
+    return preset
 
 
 def _fit_dialog_to_screen(dialog, parent, desired_w, desired_h, min_w, min_h):
@@ -822,12 +863,491 @@ def _fit_dialog_to_screen(dialog, parent, desired_w, desired_h, min_w, min_h):
 
 
 
-# ===== 快速设置中，正文字体联动的元素 =====
-BODY_FONT_GROUP = ['body', 'heading3', 'heading4', 'closing', 'attachment', 'signature', 'date']
+# ===== 格式编辑内联区（P2 定稿：docs/ARCHITECTURE.md 3.3，对照 prototype/layout_b.py） =====
+
+# 固定起始格式：(id, 名称, 描述, 是否显示「内置」徽标)。
+# 出厂只有这 4 个起点，用户格式从空开始攒（「＋ 存为新格式」）。
+STARTING_FORMATS = (
+    ('official', 'GB/T 公文标准', '党政机关公文格式', True),
+    ('academic', '学术论文', '论文投稿与学位论文', True),
+    ('legal', '法律文书', '合同、起诉状等', True),
+    ('custom', '自定义格式', '从公文格式起步，按需改', False),
+)
+
+# 参数表行：一行一个元素（逐行独立编辑，无联动派生）
+ELEMENTS = (
+    ('title', '主标题'),
+    ('recipient', '主送机关'),
+    ('heading1', '一级标题'),
+    ('heading2', '二级标题'),
+    ('heading3', '三级标题'),
+    ('heading4', '四级标题'),
+    ('body', '正文'),
+    ('signature', '落款'),
+    ('date', '成文日期'),
+    ('attachment', '附件说明'),
+)
+
+ALIGN_LABELS = (
+    ('left', '左对齐'), ('center', '居中'),
+    ('right', '右对齐'), ('justify', '两端对齐'),
+)
+INDENT_LABELS = ((0, '0'), (32, '2 字符'), (16, '1 字符'), (48, '3 字符'))
+
+# 用户格式名的显示上限：超出截断，避免长名字把预设面板撑宽
+# （wraplength 只管换行不约束最小请求宽度，见 prototype/README.md）
+CUSTOM_NAME_MAX_CHARS = 8
+
+
+def size_display(pt):
+    for name, value in FONT_SIZES:
+        try:
+            if abs(float(value) - float(pt)) < 0.01:
+                return '%s(%spt)' % (name, value)
+        except (TypeError, ValueError):
+            break
+    return '%spt' % pt
+
+
+def size_from_display(text):
+    if '(' in text and text.endswith('pt)'):
+        return float(text[text.rfind('(') + 1:-3])
+    try:
+        return float(str(text).replace('pt', ''))
+    except ValueError:
+        return 16.0
+
+
+def _paint(widget, bg):
+    """递归给纯 tk 控件换底色，跳过 ttk 控件（它们不吃 bg）。"""
+    try:
+        if not isinstance(widget, ttk.Widget):
+            widget.configure(bg=bg)
+    except tk.TclError:
+        pass
+    for child in widget.winfo_children():
+        _paint(child, bg)
+
+
+class PresetOption(tk.Frame):
+    """左侧预设行：起始格式与用户格式同一行样式。"""
+
+    def __init__(self, parent, preset_id, label, description, is_builtin, controller):
+        super().__init__(parent, bg=Theme.CARD, highlightthickness=1,
+                         highlightbackground=Theme.BORDER)
+        self.preset_id = preset_id
+        self.controller = controller
+        self.selected = False
+
+        inner = tk.Frame(self, bg=Theme.CARD)
+        inner.pack(fill='x', padx=Theme.SPACE_SM + 2, pady=Theme.SPACE_SM - 1)
+
+        head = tk.Frame(inner, bg=Theme.CARD)
+        head.pack(fill='x')
+        self.title = tk.Label(head, text=label, font=get_font(11), bg=Theme.CARD,
+                              fg=Theme.TEXT, anchor='w')
+        self.title.pack(side='left')
+        if is_builtin:
+            self.badge = tk.Label(head, text='内置', font=get_font(8), bg=Theme.BG,
+                                  fg=Theme.TEXT_MUTED, padx=4)
+            self.badge.pack(side='right')
+
+        self.desc = tk.Label(inner, text=description, font=get_font(9), bg=Theme.CARD,
+                             fg=Theme.TEXT_MUTED, anchor='w')
+        self.desc.pack(fill='x', anchor='w')
+
+        for w in (self, inner, head, self.title, self.desc):
+            w.bind('<Button-1>', self._on_click)
+            w.bind('<Enter>', self._on_enter)
+            w.bind('<Leave>', self._on_leave)
+            w.configure(cursor='hand2')
+
+    def _on_click(self, _event=None):
+        self.controller.select_format(self.preset_id)
+
+    def _on_enter(self, _event=None):
+        if not self.selected:
+            self.configure(highlightbackground='#D0CCC6')
+
+    def _on_leave(self, _event=None):
+        self._apply()
+
+    def set_selected(self, selected):
+        self.selected = selected
+        self._apply()
+
+    def fit_width(self, width):
+        """把用户格式名截断到面板装得下的长度（wraplength 不约束最小宽度）。"""
+        text = self.title.cget('text')
+        if len(text) > CUSTOM_NAME_MAX_CHARS:
+            self.title.configure(text=text[:CUSTOM_NAME_MAX_CHARS - 1] + '…')
+
+    def _apply(self):
+        bg = Theme.PRIMARY_LIGHT if self.selected else Theme.CARD
+        self.configure(bg=bg,
+                       highlightbackground=Theme.PRIMARY if self.selected else Theme.BORDER,
+                       highlightthickness=2 if self.selected else 1)
+        _paint(self, bg)
+        if getattr(self, 'badge', None) is not None:
+            self.badge.configure(bg=Theme.BG)
+        self.title.configure(font=get_font(11, 'bold' if self.selected else 'normal'))
+
+
+class PresetColumn(tk.Frame):
+    """左列：起始格式 + 我的格式，统一按行呈现，整列是带边框的滚动面板。
+
+    固定高度上限（VIEWPORT_HEIGHT），内容多了只在面板内滚 —— 没有上限的话
+    面板会一直长高，滚动永远不会发生。没有展开/收起按钮（边框+滚动条已足够）。
+    """
+
+    ROW_GAP = Theme.SPACE_SM
+    MIN_COLUMN_WIDTH = 150
+    VIEWPORT_HEIGHT = 400
+    SCROLLBAR_WIDTH = 12
+    # 内容高度超过视口这么多像素才算「需要滚动」（canvas 可视高度与
+    # scrollregion 之间有 1~4px 边框误差，见 prototype/README.md）
+    OVERFLOW_TOLERANCE = 6
+
+    def __init__(self, parent, controller, custom_formats=()):
+        super().__init__(parent, bg=Theme.BG)
+        self.controller = controller
+        self.custom_formats = tuple(custom_formats)
+        self.rows = {}
+
+        head = tk.Frame(self, bg=Theme.BG)
+        head.pack(fill='x', pady=(0, Theme.SPACE_XS))
+        tk.Label(head, text='起始格式', font=get_font(10), bg=Theme.BG,
+                 fg=Theme.TEXT_MUTED).pack(side='left')
+
+        # 带边框的滚动面板：边框让「这里可以滚」一眼可见
+        self.panel = tk.Frame(self, bg=Theme.BORDER, padx=1, pady=1)
+        self.panel.pack(fill='x')
+        self.canvas = tk.Canvas(self.panel, bg=Theme.BG, highlightthickness=0,
+                                borderwidth=0)
+        self.canvas.pack(side='left', fill='both', expand=True)
+        self.scrollbar = tk.Scrollbar(self.panel, orient='vertical',
+                                      command=self.canvas.yview,
+                                      width=self.SCROLLBAR_WIDTH)
+        self.canvas.configure(yscrollcommand=self._on_yscroll)
+
+        self.list_area = tk.Frame(self.canvas, bg=Theme.BG)
+        self._list_window = self.canvas.create_window((0, 0), window=self.list_area,
+                                                     anchor='nw')
+        self.canvas.bind('<Configure>', self._sync_viewport_width)
+
+        self.empty_hint = tk.Label(
+            self.list_area, text='还没有保存过格式\n改好参数后点上方\n「＋ 存为新格式」',
+            font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED, justify='left',
+            anchor='w', padx=Theme.SPACE_SM, pady=Theme.SPACE_SM)
+
+        self.column_width = self.MIN_COLUMN_WIDTH
+        self._viewport_height = 0
+        self.rebuild(self.custom_formats)
+        self._bind_wheel_recursive(self.panel)
+
+    def rebuild(self, custom_formats, scroll_to_end=False):
+        """按当前注册表重建行（固定起始格式在前，用户格式在后）。"""
+        self.custom_formats = tuple(custom_formats)
+        for row in self.rows.values():
+            row.destroy()
+        self.rows = {}
+        for format_id, label, description, is_builtin in STARTING_FORMATS:
+            self.rows[format_id] = PresetOption(
+                self.list_area, format_id, label, description, is_builtin,
+                self.controller)
+        for format_id, label in self.custom_formats:
+            self.rows[format_id] = PresetOption(
+                self.list_area, format_id, label, '', False, self.controller)
+
+        self.column_width = self._measure_column_width()
+        self._layout()
+        self._lock_viewport()
+        for format_id, _label in self.custom_formats:
+            self.rows[format_id].fit_width(self.column_width)
+        self._bind_wheel_recursive(self.list_area)
+        self.update_idletasks()
+        self._sync_scrollregion()
+        if scroll_to_end:
+            self.canvas.yview_moveto(1.0)   # 滚到底，让新增项可见
+        self.set_selected(self.controller.preset.get())
+
+    # ---------- 滚动视口（四个坑的解法见 prototype/README.md） ----------
+
+    def _content_overflows(self):
+        region = self.canvas.cget('scrollregion').split()
+        if len(region) != 4:
+            return False
+        try:
+            content_height = float(region[3]) - float(region[1])
+        except ValueError:
+            return True
+        return content_height > self.canvas.winfo_height() + self.OVERFLOW_TOLERANCE
+
+    def _canvas_width(self):
+        """面板总宽恒定：滚动条占多少，canvas 就少多少。"""
+        if self.scrollbar.winfo_manager():
+            return max(60, self.column_width - self.SCROLLBAR_WIDTH)
+        return self.column_width
+
+    def _on_yscroll(self, first, last):
+        self.scrollbar.set(first, last)
+        if self._content_overflows():
+            if not self.scrollbar.winfo_manager():
+                self.scrollbar.pack(side='right', fill='y')
+                self._apply_canvas_geometry()
+        elif self.scrollbar.winfo_manager():
+            self.scrollbar.pack_forget()
+            self._apply_canvas_geometry()
+
+    def _apply_canvas_geometry(self):
+        width = self._canvas_width()
+        self.canvas.configure(width=width)
+        self.canvas.itemconfigure(self._list_window, width=width)
+
+    def _sync_scrollregion(self, _event=None):
+        self.canvas.configure(scrollregion=self.canvas.bbox('all'))
+        self._on_yscroll(*self.canvas.yview())
+
+    def _sync_viewport_width(self, event=None):
+        self._apply_canvas_geometry()
+        if self._viewport_height:
+            self.canvas.configure(height=self._viewport_height)
+
+    def _bind_wheel_recursive(self, widget):
+        """滚轮绑定到面板内所有控件（只绑 canvas 会在鼠标移到子行上时漏事件）。"""
+        for target in [widget] + self._descendants(widget):
+            target.bind('<MouseWheel>', self._on_wheel)
+
+    @staticmethod
+    def _descendants(widget):
+        found = []
+        for child in widget.winfo_children():
+            found.append(child)
+            found.extend(PresetColumn._descendants(child))
+        return found
+
+    def _on_wheel(self, event):
+        if not self._content_overflows():
+            return None
+        self.canvas.yview_scroll(int(-event.delta / 120), 'units')
+        return 'break'
+
+    def _lock_viewport(self):
+        """给面板定高（canvas 的默认宽/默认高亮边框必须显式清掉）。"""
+        if not self._viewport_height:
+            self._viewport_height = ui_px(self.VIEWPORT_HEIGHT)
+        self.canvas.configure(height=self._viewport_height)
+        self._apply_canvas_geometry()
+
+    def _layout(self):
+        for row in self.rows.values():
+            row.pack_forget()
+        self.empty_hint.pack_forget()
+        for format_id, _label, _desc, _flag in STARTING_FORMATS:
+            self.rows[format_id].pack(fill='x', pady=(0, self.ROW_GAP))
+        if not self.custom_formats:
+            self.empty_hint.pack(fill='x')
+        for format_id, _label in self.custom_formats:
+            self.rows[format_id].pack(fill='x', pady=(0, self.ROW_GAP))
+
+    def _measure_column_width(self):
+        self.update_idletasks()
+        width = self.list_area.winfo_reqwidth()
+        if width <= 1:
+            width = max([row.winfo_reqwidth() for row in self.rows.values()]
+                        + [self.MIN_COLUMN_WIDTH])
+        return max(self.MIN_COLUMN_WIDTH, width)
+
+    def set_selected(self, format_id):
+        for key, row in self.rows.items():
+            row.set_selected(key == format_id)
+
+
+class ElementTable(tk.Frame):
+    """元素参数表：一行一个元素，9 列参数，逐行独立编辑。
+
+    grid 布局，列宽由表头统一决定；行首色条 + 行尾 ↺ 标记改动行
+    （Win11 vista 主题忽略 ttk 着色，不能靠给 Combobox 上色，
+    见 prototype/README.md）。
+    """
+
+    COLUMNS = (
+        ('font_cn', '中文字体', 17),
+        ('font_en', '英数字体', 17),
+        ('size', '字号', 11),
+        ('bold', '加粗', 4),
+        ('align', '对齐', 8),
+        ('indent', '首行缩进', 8),
+        ('line_spacing', '行距', 5),
+        ('space_before', '段前', 4),
+        ('space_after', '段后', 4),
+    )
+
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg=Theme.SURFACE, highlightthickness=1,
+                         highlightbackground=Theme.BORDER)
+        self.controller = controller
+        self.cells = {}
+        self.bars = {}
+        self.restore_buttons = {}
+        self.row_backgrounds = {}
+
+        tk.Label(self, text='元素', font=get_font(10, 'bold'), bg=Theme.CARD_ALT,
+                 fg=Theme.TEXT_SECONDARY, anchor='w', width=9
+                 ).grid(row=0, column=1, sticky='w', padx=(Theme.SPACE_SM, 0), pady=6)
+        for index, (field, label, width) in enumerate(self.COLUMNS, start=2):
+            tk.Label(self, text=label, font=get_font(10, 'bold'), bg=Theme.CARD_ALT,
+                     fg=Theme.TEXT_SECONDARY, anchor='w', width=width
+                     ).grid(row=0, column=index, sticky='w', pady=6)
+        tk.Label(self, text='', bg=Theme.CARD_ALT
+                 ).grid(row=0, column=len(self.COLUMNS) + 2, sticky='ew', pady=6)
+
+        for row_index, (element, label) in enumerate(ELEMENTS, start=1):
+            self._build_row(row_index, element, label)
+
+    def _build_row(self, row_index, element, label):
+        background = Theme.SURFACE if row_index % 2 else Theme.CARD
+        self.row_backgrounds[element] = background
+
+        # 行首改动色条：不依赖 ttk 主题着色，任何主题下都能看见
+        bar = tk.Frame(self, bg=background, width=3)
+        bar.grid(row=row_index, column=0, sticky='ns', padx=(0, 2))
+        self.bars[element] = bar
+
+        tk.Label(self, text=label, font=get_font(10), bg=background,
+                 fg=Theme.TEXT, anchor='w', width=9
+                 ).grid(row=row_index, column=1, sticky='w', padx=(Theme.SPACE_SM, 0), pady=3)
+
+        for column, (field, _label, width) in enumerate(self.COLUMNS, start=2):
+            widget, var = self._make_cell(element, field, width, background)
+            widget.grid(row=row_index, column=column, sticky='w', padx=1, pady=2)
+            self.cells[(element, field)] = (widget, var)
+
+        restore = tk.Label(self, text='↺', font=get_font(12), bg=background,
+                           fg=Theme.BORDER, cursor='arrow', width=3)
+        restore.grid(row=row_index, column=len(self.COLUMNS) + 2, sticky='w')
+        restore.bind('<Button-1>', lambda _e, el=element: self.controller.restore_row(el))
+        self.restore_buttons[element] = restore
+
+    def _make_cell(self, element, field, width, background):
+        """按字段类型创建控件，返回 (widget, var)。"""
+        font = get_font(9) if field in ('font_cn', 'font_en') else get_font(10)
+        if field == 'bold':
+            var = tk.BooleanVar()
+            widget = tk.Checkbutton(
+                self, variable=var, bg=background, activebackground=background,
+                highlightthickness=0, bd=0, cursor='hand2',
+                command=lambda el=element: self.controller.cell_changed(
+                    el, 'bold', var.get()))
+        elif field == 'align':
+            var = tk.StringVar()
+            widget = ttk.Combobox(self, textvariable=var, state='readonly', width=width,
+                                  font=font,
+                                  values=[label for _v, label in ALIGN_LABELS])
+            widget.bind('<<ComboboxSelected>>',
+                        lambda _e, el=element: self.controller.cell_changed(
+                            el, 'align', dict((label, v) for v, label in ALIGN_LABELS)[var.get()]))
+        elif field == 'indent':
+            var = tk.StringVar()
+            widget = ttk.Combobox(self, textvariable=var, state='readonly', width=width,
+                                  font=font,
+                                  values=[label for _v, label in INDENT_LABELS])
+            widget.bind('<<ComboboxSelected>>',
+                        lambda _e, el=element: self.controller.cell_changed(
+                            el, 'indent', dict((label, v) for v, label in INDENT_LABELS)[var.get()]))
+        elif field == 'size':
+            var = tk.StringVar()
+            widget = ttk.Combobox(self, textvariable=var, state='readonly', width=width,
+                                  font=font, values=['%s(%spt)' % (name, pt) for name, pt in FONT_SIZES])
+            widget.bind('<<ComboboxSelected>>',
+                        lambda _e, el=element: self.controller.cell_changed(
+                            el, 'size', size_from_display(var.get())))
+        elif field in ('line_spacing', 'space_before', 'space_after'):
+            var = tk.StringVar()
+            widget = tk.Entry(self, textvariable=var, font=font, width=width,
+                              relief='solid', bd=1, justify='center')
+            fallback = 28 if field == 'line_spacing' else 0
+            commit = lambda _e, el=element, f=field: self.controller.cell_changed(
+                el, f, self._as_number(var.get(), fallback))
+            widget.bind('<FocusOut>', commit)
+            widget.bind('<Return>', commit)
+        else:
+            var = tk.StringVar()
+            values = COMMON_FONTS_CN if field == 'font_cn' else COMMON_FONTS_EN
+            widget = ttk.Combobox(self, textvariable=var, width=width,
+                                  font=font, values=list(values))
+            commit = lambda _e, el=element, f=field: self.controller.cell_changed(
+                el, f, var.get())
+            widget.bind('<<ComboboxSelected>>', commit)
+            widget.bind('<FocusOut>', commit)
+
+        return widget, var
+
+    @staticmethod
+    def _as_number(text, fallback):
+        """行距取整数更符合公文习惯，非整数输入保留小数。"""
+        try:
+            value = float(str(text).strip())
+        except (TypeError, ValueError):
+            return fallback
+        return int(value) if value == int(value) else value
+
+    def refresh(self, values, overrides):
+        """装载生效值并标注改动；返回 [(元素名, 字段名)] 供顶部汇总。"""
+        changed = []
+        for element, label in ELEMENTS:
+            row_values = values.get(element, {}) or {}
+            row_overrides = overrides.get(element, {}) or {}
+            dirty = 0
+            for field, field_label, _width in self.COLUMNS:
+                widget, var = self.cells[(element, field)]
+                value = row_values.get(field)
+                if field == 'bold':
+                    var.set(bool(value))
+                elif field == 'align':
+                    var.set(dict(ALIGN_LABELS).get(value, '左对齐'))
+                elif field == 'indent':
+                    var.set(dict(INDENT_LABELS).get(value, str(value)))
+                elif field == 'size':
+                    var.set(size_display(value))
+                else:
+                    var.set('' if value is None else str(value))
+
+                overridden = field in row_overrides
+                if overridden:
+                    dirty += 1
+                    changed.append('%s·%s' % (label, field_label))
+                self._tint(widget, overridden, self.row_backgrounds[element])
+
+            self.bars[element].configure(
+                bg=Theme.PRIMARY if dirty else self.row_backgrounds[element])
+            button = self.restore_buttons[element]
+            button.configure(fg=Theme.PRIMARY if dirty else Theme.BORDER,
+                             cursor='hand2' if dirty else 'arrow')
+        return changed
+
+    @staticmethod
+    def _tint(widget, overridden, background):
+        """覆盖过的格子给出可见提示，未覆盖的恢复原样。"""
+        try:
+            if isinstance(widget, ttk.Combobox):
+                widget.configure(style='Override.TCombobox' if overridden else 'TCombobox')
+            elif isinstance(widget, tk.Entry):
+                widget.configure(fg=Theme.PRIMARY if overridden else Theme.TEXT,
+                                 bg=Theme.PRIMARY_LIGHT if overridden else Theme.CARD)
+            else:
+                widget.configure(activebackground=Theme.PRIMARY_LIGHT if overridden
+                                 else background)
+        except tk.TclError:
+            pass
 
 
 class CustomSettingsDialog(tk.Toplevel):
-    """自定义格式设置弹窗 - 快速设置 + 高级设置（可折叠）"""
+    """高级设置弹窗 —— 页边距 / 表格 / 页码 / 行为 / 结束语 + 预设管理。
+
+    元素参数在主页面的参数表里逐行内联编辑（P2 定稿，联动派生规则已移除）；
+    这里只管其余参数。改动经 preset_overrides 落到当前格式上（活链接模型）。
+    """
     
     def __init__(self, parent, on_save=None):
         super().__init__(parent)
@@ -835,13 +1355,11 @@ class CustomSettingsDialog(tk.Toplevel):
         
         self.on_save = on_save
         self._config = load_custom_settings()
-        self.settings = get_active_preset(self._config)
-        if not self._config.get('active_preset_id') and self.settings.get('id'):
-            self._config['active_preset_id'] = self.settings['id']
-        self._adv_vars = {}  # 高级模式的变量存储
+        self._adv_vars = {}  # 结束语等元素行的变量存储
+        self._reload_settings()
         
         # 窗口设置
-        self.title("自定义格式设置")
+        self.title("高级设置")
         self.configure(bg=Theme.BG)
         self.resizable(True, True)
         
@@ -858,12 +1376,15 @@ class CustomSettingsDialog(tk.Toplevel):
         
         self._create_widgets()
         self._refresh_preset_list()
-        # 下拉框只显示用户项；若 active 原本指向内置预设，
-        # _refresh_preset_list 已把它切回第一份用户预设，这里重新同步 settings
-        self.settings = get_active_preset(self._config)
+        self._reload_settings()
         self.update_idletasks()   # 确保所有控件完成布局
         self._load_values()
         self.after_idle(self._load_values)  # 事件循环空闲后再刷新一次，兜底
+
+    def _reload_settings(self):
+        """把当前选中格式的生效值（基准 ⊕ 覆盖值）装载进 self.settings。"""
+        active_id = self._config.get('active_preset_id') or 'custom'
+        self.settings = get_effective_preset(self._config, active_id) or {}
     
     # ==================== 界面构建 ====================
 
@@ -879,13 +1400,13 @@ class CustomSettingsDialog(tk.Toplevel):
         )
     
     def _create_widgets(self):
-        """创建控件 - 快速设置 + 可折叠高级设置"""
+        """创建控件 - 高级设置（元素参数已内联到主页面）"""
         # ===== 顶部标题 + 按钮（固定） =====
         header = tk.Frame(self, bg=Theme.BG)
         header.pack(fill='x', padx=20, pady=(15, 5))
         
         tk.Label(
-            header, text="⚙️ 自定义格式设置", font=get_font(16, 'bold'),
+            header, text="⚙️ 高级设置 — 页边距 / 表格 / 页码 / 行为", font=get_font(16, 'bold'),
             bg=Theme.BG, fg=Theme.TEXT
         ).pack(side='left')
         
@@ -958,180 +1479,6 @@ class CustomSettingsDialog(tk.Toplevel):
             var = tk.StringVar(value=str(self.settings.get('page', {}).get(key, 2.5)))
             self.margin_vars[key] = var
             tk.Entry(f, textvariable=var, font=get_font(11), width=6, relief='solid', bd=1).pack(side='left', padx=3)
-        
-        # --- 标题格式 ---
-        self._create_section(main, "📝 标题", pad_x)
-        title_frame = tk.Frame(main, bg=Theme.BG)
-        title_frame.pack(fill='x', pady=(0, 12), padx=pad_x)
-        
-        row_t = tk.Frame(title_frame, bg=Theme.BG)
-        row_t.pack(fill='x', pady=2)
-        
-        tk.Label(row_t, text="字体:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=6, anchor='e').pack(side='left')
-        self.title_font_var = tk.StringVar()
-        self._create_combobox(row_t, self.title_font_var, COMMON_FONTS_CN, width=16,
-                              initial_value=self.settings.get('title', {}).get('font_cn', '方正小标宋简体')).pack(side='left', padx=3)
-        
-        tk.Label(row_t, text="字号:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=5, anchor='e').pack(side='left', padx=(10, 0))
-        self.title_size_var = tk.StringVar()
-        self._create_combobox(row_t, self.title_size_var, [f"{name}({pt}pt)" for name, pt in FONT_SIZES], width=11,
-                              initial_value=self._size_display(self.settings.get('title', {}).get('size', 22))).pack(side='left', padx=3)
-        
-        tk.Label(row_t, text="行距:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=5, anchor='e').pack(side='left', padx=(10, 0))
-        self.title_line_spacing_var = tk.StringVar(value=str(self.settings.get('title', {}).get('line_spacing', 28) or ''))
-        tk.Entry(row_t, textvariable=self.title_line_spacing_var, font=get_font(11), width=5, relief='solid', bd=1).pack(side='left', padx=3)
-        tk.Label(row_t, text="磅", font=get_font(10), bg=Theme.BG, fg=Theme.TEXT_MUTED).pack(side='left')
-        
-        self.title_bold_var = tk.BooleanVar(value=self.settings.get('title', {}).get('bold', False))
-        self._create_inline_toggle(
-            row_t, "加粗", self.title_bold_var
-        ).pack(side='left', padx=(10, 0))
-        
-        # --- 各级标题 ---
-        self._create_section(main, "🔤 各级标题字体", pad_x)
-        heading_frame = tk.Frame(main, bg=Theme.BG)
-        heading_frame.pack(fill='x', pady=(0, 12), padx=pad_x)
-        
-        row_h1 = tk.Frame(heading_frame, bg=Theme.BG)
-        row_h1.pack(fill='x', pady=2)
-        tk.Label(row_h1, text="一级(一、):", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=10, anchor='e').pack(side='left')
-        self.h1_font_var = tk.StringVar()
-        self._create_combobox(row_h1, self.h1_font_var, COMMON_FONTS_CN, width=16,
-                              initial_value=self.settings.get('heading1', {}).get('font_cn', '黑体')).pack(side='left', padx=3)
-        tk.Label(row_h1, text="英数字体:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=7, anchor='e').pack(side='left', padx=(10, 0))
-        self.h1_font_en_var = tk.StringVar()
-        self._create_combobox(row_h1, self.h1_font_en_var, COMMON_FONTS_EN, width=16,
-                              initial_value=self.settings.get('heading1', {}).get('font_en', 'Times New Roman')).pack(side='left', padx=3)
-        tk.Label(row_h1, text="字号:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=5, anchor='e').pack(side='left', padx=(10, 0))
-        self.h1_size_var = tk.StringVar()
-        self._create_combobox(row_h1, self.h1_size_var, [f"{name}({pt}pt)" for name, pt in FONT_SIZES], width=11,
-                              initial_value=self._size_display(self.settings.get('heading1', {}).get('size', 16))).pack(side='left', padx=3)
-        
-        self.h1_bold_var = tk.BooleanVar(value=self.settings.get('heading1', {}).get('bold', False))
-        self._create_inline_toggle(
-            row_h1, "加粗", self.h1_bold_var
-        ).pack(side='left', padx=(10, 0))
-        
-        row_h2 = tk.Frame(heading_frame, bg=Theme.BG)
-        row_h2.pack(fill='x', pady=2)
-        tk.Label(row_h2, text="二级((一)):", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=10, anchor='e').pack(side='left')
-        self.h2_font_var = tk.StringVar()
-        self._create_combobox(row_h2, self.h2_font_var, COMMON_FONTS_CN, width=16,
-                              initial_value=self.settings.get('heading2', {}).get('font_cn', '楷体_GB2312')).pack(side='left', padx=3)
-        tk.Label(row_h2, text="英数字体:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=7, anchor='e').pack(side='left', padx=(10, 0))
-        self.h2_font_en_var = tk.StringVar()
-        self._create_combobox(row_h2, self.h2_font_en_var, COMMON_FONTS_EN, width=16,
-                              initial_value=self.settings.get('heading2', {}).get('font_en', 'Times New Roman')).pack(side='left', padx=3)
-        tk.Label(row_h2, text="字号:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=5, anchor='e').pack(side='left', padx=(10, 0))
-        self.h2_size_var = tk.StringVar()
-        self._create_combobox(row_h2, self.h2_size_var, [f"{name}({pt}pt)" for name, pt in FONT_SIZES], width=11,
-                              initial_value=self._size_display(self.settings.get('heading2', {}).get('size', 16))).pack(side='left', padx=3)
-        
-        self.h2_bold_var = tk.BooleanVar(value=self.settings.get('heading2', {}).get('bold', False))
-        self._create_inline_toggle(
-            row_h2, "加粗", self.h2_bold_var
-        ).pack(side='left', padx=(10, 0))
-
-        row_h3 = tk.Frame(heading_frame, bg=Theme.BG)
-        row_h3.pack(fill='x', pady=2)
-        tk.Label(row_h3, text="三级(1.):", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=10, anchor='e').pack(side='left')
-        self.h3_font_var = tk.StringVar()
-        self._create_combobox(row_h3, self.h3_font_var, COMMON_FONTS_CN, width=16,
-                              initial_value=self.settings.get('heading3', {}).get('font_cn', '仿宋_GB2312')).pack(side='left', padx=3)
-        tk.Label(row_h3, text="英数字体:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=7, anchor='e').pack(side='left', padx=(10, 0))
-        self.h3_font_en_var = tk.StringVar()
-        self._create_combobox(row_h3, self.h3_font_en_var, COMMON_FONTS_EN, width=16,
-                              initial_value=self.settings.get('heading3', {}).get('font_en', 'Times New Roman')).pack(side='left', padx=3)
-
-        row_h4 = tk.Frame(heading_frame, bg=Theme.BG)
-        row_h4.pack(fill='x', pady=2)
-        tk.Label(row_h4, text="四级((1)):", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=10, anchor='e').pack(side='left')
-        self.h4_font_var = tk.StringVar()
-        self._create_combobox(row_h4, self.h4_font_var, COMMON_FONTS_CN, width=16,
-                              initial_value=self.settings.get('heading4', {}).get('font_cn', '仿宋_GB2312')).pack(side='left', padx=3)
-        tk.Label(row_h4, text="英数字体:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=7, anchor='e').pack(side='left', padx=(10, 0))
-        self.h4_font_en_var = tk.StringVar()
-        self._create_combobox(row_h4, self.h4_font_en_var, COMMON_FONTS_EN, width=16,
-                              initial_value=self.settings.get('heading4', {}).get('font_en', 'Times New Roman')).pack(side='left', padx=3)
-        
-        # --- 正文格式 ---
-        self._create_section(main, "📖 正文格式", pad_x)
-        body_frame = tk.Frame(main, bg=Theme.BG)
-        body_frame.pack(fill='x', pady=(0, 12), padx=pad_x)
-        
-        row_b1 = tk.Frame(body_frame, bg=Theme.BG)
-        row_b1.pack(fill='x', pady=2)
-        tk.Label(row_b1, text="字体:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=6, anchor='e').pack(side='left')
-        self.body_font_var = tk.StringVar()
-        self._create_combobox(row_b1, self.body_font_var, COMMON_FONTS_CN, width=16,
-                              initial_value=self.settings.get('body', {}).get('font_cn', '仿宋_GB2312')).pack(side='left', padx=3)
-        
-        tk.Label(row_b1, text="字号:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=5, anchor='e').pack(side='left', padx=(10, 0))
-        self.body_size_var = tk.StringVar()
-        self._create_combobox(row_b1, self.body_size_var, [f"{name}({pt}pt)" for name, pt in FONT_SIZES], width=11,
-                              initial_value=self._size_display(self.settings.get('body', {}).get('size', 16))).pack(side='left', padx=3)
-        
-        tk.Label(row_b1, text="行距:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=5, anchor='e').pack(side='left', padx=(10, 0))
-        self.line_spacing_var = tk.StringVar(value=str(self.settings.get('body', {}).get('line_spacing', 28) or ''))
-        tk.Entry(row_b1, textvariable=self.line_spacing_var, font=get_font(11), width=5, relief='solid', bd=1).pack(side='left', padx=3)
-        tk.Label(row_b1, text="磅", font=get_font(10), bg=Theme.BG, fg=Theme.TEXT_MUTED).pack(side='left')
-        
-        self.body_bold_var = tk.BooleanVar(value=self.settings.get('body', {}).get('bold', False))
-        self._create_inline_toggle(
-            row_b1, "加粗", self.body_bold_var
-        ).pack(side='left', padx=(10, 0))
-        
-        row_b_en = tk.Frame(body_frame, bg=Theme.BG)
-        row_b_en.pack(fill='x', pady=2)
-        tk.Label(
-            row_b_en, text="英数字体:", font=get_font(11),
-            bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=6, anchor='e'
-        ).pack(side='left')
-        self.global_font_en_var = tk.StringVar()
-        self._create_combobox(
-            row_b_en, self.global_font_en_var, COMMON_FONTS_EN, width=16,
-            initial_value=self.settings.get('body', {}).get('font_en', 'Times New Roman')
-        ).pack(side='left', padx=3)
-        tk.Label(
-            row_b_en,
-            text="  ⓘ 全文英文/数字统一使用此字体",
-            font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED
-        ).pack(side='left', padx=(10, 0))
-        
-        row_b2 = tk.Frame(body_frame, bg=Theme.BG)
-        row_b2.pack(fill='x', pady=2)
-        tk.Label(row_b2, text="首行缩进:", font=get_font(11), bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=8, anchor='e').pack(side='left')
-        self.indent_var = tk.StringVar()
-        _body = self.settings.get('body', {})
-        _indent = _body.get('indent', 32)
-        _bsize = _body.get('size', 16) or 16
-        _indent_chars = int(_indent / _bsize) if _bsize else 2
-        self._create_combobox(row_b2, self.indent_var, ['0字符', '2字符', '4字符'], width=8,
-                              initial_value=f'{_indent_chars}字符').pack(side='left', padx=3)
-
-        row_spacing = tk.Frame(body_frame, bg=Theme.BG)
-        row_spacing.pack(fill='x', pady=2)
-        tk.Label(
-            row_spacing, text="段前/段后:", font=get_font(11),
-            bg=Theme.BG, fg=Theme.TEXT_SECONDARY, width=8, anchor='e'
-        ).pack(side='left')
-        self.space_before_var = tk.StringVar(value='0')
-        tk.Entry(
-            row_spacing, textvariable=self.space_before_var,
-            font=get_font(11), width=4, relief='solid', bd=1
-        ).pack(side='left', padx=3)
-        tk.Label(row_spacing, text="/ ", font=get_font(10),
-                 bg=Theme.BG, fg=Theme.TEXT_MUTED).pack(side='left')
-        self.space_after_var = tk.StringVar(value='0')
-        tk.Entry(
-            row_spacing, textvariable=self.space_after_var,
-            font=get_font(11), width=4, relief='solid', bd=1
-        ).pack(side='left', padx=3)
-        tk.Label(row_spacing, text="磅  ⓘ 全文段前/段后统一设置",
-                 font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED).pack(side='left', padx=(4,0))
-        
-        tk.Label(row_b2, text="  ⓘ 正文字体/字号同时应用于: 三/四级标题、落款、附件、结束语",
-                 font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED).pack(side='left', padx=(10, 0))
         
         # --- 表格格式 ---
         self._create_section(main, "📊 表格格式", pad_x)
@@ -1323,10 +1670,11 @@ class CustomSettingsDialog(tk.Toplevel):
             self.replace_page_number_var,
         ).pack(anchor='w', padx=6, pady=2)
         
-        # ============================================================
-        #  高级设置（可折叠）
-        # ============================================================
-        self._create_advanced_section(main, pad_x)
+        # --- 结束语（参数表之外的元素，在此独立编辑） ---
+        self._create_section(main, "🧾 结束语（特此说明等）", pad_x)
+        closing_frame = tk.Frame(main, bg=Theme.BG)
+        closing_frame.pack(fill='x', pady=(0, 12), padx=pad_x)
+        self._create_adv_element_row(closing_frame, pad_x, 'closing', '结束语', '仿宋_GB2312', 16)
         
         # ===== 底部按钮 =====
         btn_frame = tk.Frame(self, bg=Theme.BG)
@@ -1410,140 +1758,121 @@ class CustomSettingsDialog(tk.Toplevel):
         return bar
 
     def _refresh_preset_list(self):
-        """刷新下拉菜单显示。"""
-        presets = [p for p in self._config.get('presets', []) if not p.get('is_builtin')]
+        """刷新下拉菜单：显示全部预设（固定起始格式标注「(内置)」）。"""
+        presets = list(self._config.get('presets', []))
         self._visible_presets = presets
-        names = [p.get('name', '未命名') for p in presets]
+        names = [self._preset_display_name(p) for p in presets]
         self.preset_combo['values'] = names
 
-        # 选中当前 active 的
         active_id = self._config.get('active_preset_id')
-        if active_id:
-            for i, p in enumerate(presets):
-                if p.get('id') == active_id:
-                    self.preset_combo.current(i)
-                    return
+        for i, p in enumerate(presets):
+            if p.get('id') == active_id:
+                self.preset_combo.current(i)
+                return
         if names:
             self.preset_combo.current(0)
             self._config['active_preset_id'] = presets[0].get('id')
 
-    def _write_current_settings_to_config(self):
-        """把当前 self.settings 写回 _config 中对应的 preset。
-
-        内置预设（is_builtin）是只读条目：定义只来自代码，不回写、不持久化
-        （用户对内置预设的微调走 builtin_overrides，在 P2 落地）。
-        """
-        active_id = self._config.get('active_preset_id')
-        if active_id:
-            for i, p in enumerate(self._config.get('presets', [])):
-                if p.get('id') == active_id:
-                    if p.get('is_builtin'):
-                        return
-                    self.settings['id'] = active_id
-                    self.settings['name'] = p.get('name', self.settings.get('name', '我的自定义格式'))
-                    self.settings['is_builtin'] = False
-                    self._config['presets'][i] = self.settings
-                    return
+    @staticmethod
+    def _preset_display_name(preset):
+        name = preset.get('name', '未命名')
+        return '%s (内置)' % name if preset.get('is_builtin') else name
 
     def _on_preset_selected(self, event=None):
-        """切换预设：保存当前设置回旧 preset → 加载新 preset 的值。"""
-        # 先把当前 UI 的值保存回 self.settings
+        """切换预设：先把改动写入当前格式的覆盖值，再装载新格式。"""
         self._save_values()
+        save_custom_settings(self._config)
 
-        # 把 self.settings 写回当前 active preset
-        self._write_current_settings_to_config()
-
-        # 切到新选中的 preset
         new_idx = self.preset_combo.current()
         if new_idx < 0:
             return
         new_preset = self._visible_presets[new_idx]
         self._config['active_preset_id'] = new_preset.get('id')
-
-        # 加载新 preset 的值到 UI
-        import copy
-        self.settings = copy.deepcopy(new_preset)
+        self._reload_settings()
         self._load_values()
 
     def _on_new_preset(self):
-        """新建一份预设（基于当前 UI 值复制一份）。"""
+        """新建用户格式（把当前生效值 + 未保存改动快照成新格式）。"""
         from tkinter import simpledialog
+        count = len([p for p in self._config.get('presets', [])
+                     if not p.get('is_builtin')]) + 1
         name = simpledialog.askstring(
-            '新建预设', '请输入预设名称：', parent=self.dialog,
-            initialvalue='新预设'
+            '新建格式', '请输入格式名称：', parent=self.dialog,
+            initialvalue='我的格式 %d' % count
         )
         if not name or not name.strip():
             return
         name = name.strip()
 
-        # 检查重名
         existing = [p.get('name') for p in self._config.get('presets', [])]
         if name in existing:
-            from tkinter import messagebox
-            messagebox.showwarning('重名', f'已存在名为「{name}」的预设', parent=self.dialog)
+            messagebox.showwarning('重名', f'已存在名为「{name}」的格式', parent=self.dialog)
             return
 
-        # 基于当前 UI 值新建
-        self._save_values()
-        self._write_current_settings_to_config()
-        import copy
-        new_preset = copy.deepcopy(self.settings)
-        new_preset['id'] = str(uuid.uuid4())
-        new_preset['name'] = name
-        new_preset['is_builtin'] = False
-
-        self._config.setdefault('presets', []).append(new_preset)
-        self._config['active_preset_id'] = new_preset['id']
-        self.settings = new_preset
+        self._save_values()   # 未保存的改动先落到当前格式的覆盖值
+        save_as_new_preset(self._config,
+                           self._config.get('active_preset_id') or 'custom', name)
+        self._reload_settings()
         self._refresh_preset_list()
+        self._load_values()
+        save_custom_settings(self._config)
 
     def _on_rename_preset(self):
-        """重命名当前选中的预设。"""
-        from tkinter import simpledialog, messagebox
+        """重命名当前用户格式。固定起始格式只读 → 「另存为副本」语义。"""
+        from tkinter import simpledialog
         active_id = self._config.get('active_preset_id')
         if not active_id:
             return
-        cur = next((p for p in self._config['presets']
-                    if p.get('id') == active_id), None)
+        cur = get_preset_by_id(self._config, active_id)
         if not cur:
             return
+
         if cur.get('is_builtin'):
-            messagebox.showinfo(
-                '提示', '内置格式不可重命名，请先「+ 新建」一份自定义格式',
-                parent=self.dialog
-            )
+            self._save_values()
+            name = simpledialog.askstring(
+                '另存为副本', '内置格式不可修改，把当前生效值另存为：',
+                parent=self.dialog,
+                initialvalue='%s 副本' % cur.get('name', '格式'))
+            if not name or not name.strip():
+                return
+            name = name.strip()
+            existing = [p.get('name') for p in self._config.get('presets', [])]
+            if name in existing:
+                messagebox.showwarning('重名', f'已存在名为「{name}」的格式',
+                                       parent=self.dialog)
+                return
+            save_as_new_preset(self._config, active_id, name)
+            self._reload_settings()
+            self._refresh_preset_list()
+            self._load_values()
+            save_custom_settings(self._config)
             return
 
         new_name = simpledialog.askstring(
-            '重命名预设', '新名称：', parent=self.dialog,
-            initialvalue=cur.get('name', '')
-        )
+            '重命名格式', '新名称：', parent=self.dialog,
+            initialvalue=cur.get('name', ''))
         if not new_name or not new_name.strip():
             return
         new_name = new_name.strip()
 
-        # 检查重名
-        existing = [p.get('name') for p in self._config['presets']
+        existing = [p.get('name') for p in self._config.get('presets', [])
                     if p.get('id') != active_id]
         if new_name in existing:
-            messagebox.showwarning('重名', f'已存在名为「{new_name}」的预设', parent=self.dialog)
+            messagebox.showwarning('重名', f'已存在名为「{new_name}」的格式',
+                                   parent=self.dialog)
             return
 
         cur['name'] = new_name
-        self.settings['name'] = new_name
         self._refresh_preset_list()
+        save_custom_settings(self._config)
 
     def _on_delete_preset(self):
-        """删除当前选中的预设。内置项只读不可删；最后一份用户预设不能删（保护）。"""
+        """删除当前选中的用户格式。固定起始格式只读不可删；用户格式可删到零。"""
         from tkinter import messagebox
         presets = self._config.get('presets', [])
-        user_presets = [p for p in presets if not p.get('is_builtin')]
-        if len(user_presets) <= 1:
-            messagebox.showinfo('提示', '至少需要保留一份预设，不能删除最后一份', parent=self.dialog)
-            return
-
         active_id = self._config.get('active_preset_id')
-        cur = next((p for p in user_presets if p.get('id') == active_id), None)
+        cur = next((p for p in presets
+                    if p.get('id') == active_id and not p.get('is_builtin')), None)
         if not cur:
             if get_preset_by_id(self._config, active_id):
                 messagebox.showinfo('提示', '内置格式不可删除', parent=self.dialog)
@@ -1551,36 +1880,32 @@ class CustomSettingsDialog(tk.Toplevel):
 
         if not messagebox.askyesno(
             '确认删除',
-            f'确定要删除预设「{cur.get("name", "?")}」吗？此操作不可撤销。',
+            f'确定要删除格式「{cur.get("name", "?")}」吗？此操作不可撤销。',
             parent=self.dialog
         ):
             return
 
         self._config['presets'] = [p for p in presets if p.get('id') != active_id]
-        new_active = next(p for p in self._config['presets'] if not p.get('is_builtin'))
-        self._config['active_preset_id'] = new_active.get('id')
-
-        import copy
-        self.settings = copy.deepcopy(new_active)
+        self._config['active_preset_id'] = 'custom'
+        self._reload_settings()
         self._refresh_preset_list()
         self._load_values()
+        save_custom_settings(self._config)
 
     def _on_export_preset(self):
-        """导出当前选中的预设为 .json 文件。"""
-        from tkinter import filedialog, messagebox
+        """导出当前选中格式（生效值快照）为 .json 文件。"""
+        from tkinter import filedialog
         import json
 
         self._save_values()
-        self._write_current_settings_to_config()
-        active_id = self._config.get('active_preset_id')
-        cur = next((p for p in self._config.get('presets', [])
-                    if p.get('id') == active_id), None)
+        active_id = self._config.get('active_preset_id') or 'custom'
+        cur = get_effective_preset(self._config, active_id)
         if not cur:
             return
 
         default_name = f"{cur.get('name', 'preset')}.docfmt.json"
         path = filedialog.asksaveasfilename(
-            title='导出预设',
+            title='导出格式',
             defaultextension='.json',
             initialfile=default_name,
             filetypes=[('公文格式预设', '*.json'), ('所有文件', '*.*')],
@@ -1589,28 +1914,28 @@ class CustomSettingsDialog(tk.Toplevel):
         if not path:
             return
 
-        # 导出时去掉 id（导入时会重新生成，避免冲突）
+        # 导出去掉 id / is_builtin（导入时重新生成，避免冲突）
         export_data = {
             'schema_version': CONFIG_SCHEMA_VERSION,
             'export_type': 'docformat-preset',
-            'preset': {k: v for k, v in cur.items() if k != 'id'},
+            'preset': {k: v for k, v in cur.items() if k not in ('id', 'is_builtin')},
         }
         try:
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2)
-            messagebox.showinfo('导出成功', f'预设已导出到\n{path}',
+            messagebox.showinfo('导出成功', f'格式已导出到\n{path}',
                                 parent=self.dialog)
         except Exception as e:
             messagebox.showerror('导出失败', str(e), parent=self.dialog)
 
     def _on_import_preset(self):
-        """导入 .json 预设文件。"""
-        from tkinter import filedialog, messagebox
+        """导入 .json 格式文件（存为新的用户格式）。"""
+        from tkinter import filedialog
         import json
         import copy
 
         path = filedialog.askopenfilename(
-            title='导入预设',
+            title='导入格式',
             filetypes=[('公文格式预设', '*.json'), ('所有文件', '*.*')],
             parent=self.dialog,
         )
@@ -1648,7 +1973,7 @@ class CustomSettingsDialog(tk.Toplevel):
         new_preset['id'] = str(uuid.uuid4())
         new_preset['is_builtin'] = False
 
-        base_name = new_preset.get('name', '导入的预设')
+        base_name = new_preset.get('name', '导入的格式')
         existing = {p.get('name') for p in self._config.get('presets', [])}
         final_name = base_name
         counter = 2
@@ -1658,118 +1983,62 @@ class CustomSettingsDialog(tk.Toplevel):
         new_preset['name'] = final_name
 
         self._save_values()
-        self._write_current_settings_to_config()
         self._config.setdefault('presets', []).append(new_preset)
         self._config['active_preset_id'] = new_preset['id']
-        self.settings = new_preset
+        self._reload_settings()
         self._refresh_preset_list()
         self._load_values()
+        save_custom_settings(self._config)
 
         messagebox.showinfo(
             '导入成功',
-            f'预设已导入为「{final_name}」',
+            f'格式已导入为「{final_name}」',
             parent=self.dialog
         )
-    
-    def _create_advanced_section(self, parent, pad_x):
-        """创建可折叠的高级设置区域"""
-        self._adv_expanded = False
-        
-        # 折叠按钮
-        self._adv_toggle_frame = tk.Frame(parent, bg=Theme.BG)
-        self._adv_toggle_frame.pack(fill='x', padx=pad_x, pady=(8, 0))
-        
-        # 分隔线
-        tk.Frame(self._adv_toggle_frame, bg=Theme.BORDER, height=1).pack(fill='x', pady=(0, 8))
-        
-        self._adv_toggle_label = tk.Label(
-            self._adv_toggle_frame,
-            text="▸ 高级设置 — 按元素类型独立配置字体/行距",
-            font=get_font(12, 'bold'), bg=Theme.BG, fg=Theme.TEXT_SECONDARY,
-            cursor='hand2', anchor='w'
-        )
-        self._adv_toggle_label.pack(anchor='w')
-        self._adv_toggle_label.bind('<Button-1>', lambda e: self._toggle_advanced())
-        self._adv_toggle_label.bind('<Enter>', lambda e: self._adv_toggle_label.configure(fg=Theme.PRIMARY))
-        self._adv_toggle_label.bind('<Leave>', lambda e: self._adv_toggle_label.configure(fg=Theme.TEXT_SECONDARY))
-        
-        # 高级内容区域（初始隐藏）
-        self._adv_content = tk.Frame(parent, bg=Theme.BG)
-        # 不 pack — 初始隐藏
-        
-        tk.Label(
-            self._adv_content,
-            text="ⓘ 此处可逐个元素类型覆盖上方快速设置的值。留空行距表示跟随正文行距。",
-            font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED
-        ).pack(anchor='w', padx=pad_x, pady=(5, 8))
-        
-        # 元素类型列表
-        elements = [
-            ('recipient', '🏢 主送机关', '仿宋_GB2312', 16),
-            ('heading1',  '1️⃣  一级标题 (一、)', '黑体', 16),
-            ('heading2',  '2️⃣  二级标题 ((一))', '楷体_GB2312', 16),
-            ('heading3',  '3️⃣  三级标题 (1.)', '仿宋_GB2312', 16),
-            ('heading4',  '4️⃣  四级标题 ((1))', '仿宋_GB2312', 16),
-            ('attachment', '📎 附件', '仿宋_GB2312', 16),
-            ('closing',   '🧾 结束语', '仿宋_GB2312', 16),
-            ('signature', '✒️  落款单位', '仿宋_GB2312', 16),
-            ('date',      '📅 落款日期', '仿宋_GB2312', 16),
-        ]
-        
-        for key, label, default_font, default_size in elements:
-            self._create_adv_element_row(self._adv_content, pad_x, key, label, default_font, default_size)
-    
+
     def _create_adv_element_row(self, parent, pad_x, key, label, default_font, default_size):
-        """创建高级设置中的一个元素行：中文字体 + 英数字体 + 字号 + 行距 + 加粗"""
+        """创建一行元素参数（中文字体 + 英数字体 + 字号 + 行距 + 加粗），逐行独立编辑。"""
         row = tk.Frame(parent, bg=Theme.BG)
         row.pack(fill='x', padx=pad_x, pady=2)
-        
-        tk.Label(row, text=label, font=get_font(10), bg=Theme.BG, fg=Theme.TEXT, width=14, anchor='w').pack(side='left')
-        
-        # 中文字体
+
+        tk.Label(row, text=label, font=get_font(10), bg=Theme.BG, fg=Theme.TEXT,
+                 width=14, anchor='w').pack(side='left')
+
         font_var = tk.StringVar()
         self._create_combobox(row, font_var, COMMON_FONTS_CN, width=12,
-                              initial_value=self.settings.get(key, {}).get('font_cn', default_font)).pack(side='left', padx=3)
+                              initial_value=self.settings.get(key, {}).get('font_cn', default_font)
+                              ).pack(side='left', padx=3)
 
-        # 英数字体
-        tk.Label(row, text="英数:", font=get_font(10), bg=Theme.BG, fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 0))
+        tk.Label(row, text="英数:", font=get_font(10), bg=Theme.BG,
+                 fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 0))
         font_en_var = tk.StringVar()
         self._create_combobox(row, font_en_var, COMMON_FONTS_EN, width=12,
-                              initial_value=self.settings.get(key, {}).get('font_en', 'Times New Roman')).pack(side='left', padx=3)
-        
-        # 字号
-        tk.Label(row, text="字号:", font=get_font(10), bg=Theme.BG, fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 0))
+                              initial_value=self.settings.get(key, {}).get('font_en', 'Times New Roman')
+                              ).pack(side='left', padx=3)
+
+        tk.Label(row, text="字号:", font=get_font(10), bg=Theme.BG,
+                 fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 0))
         size_var = tk.StringVar()
-        self._create_combobox(row, size_var, [f"{name}({pt}pt)" for name, pt in FONT_SIZES], width=9,
-                              initial_value=self._size_display(self.settings.get(key, {}).get('size', default_size))).pack(side='left', padx=3)
-        
-        # 行距
-        tk.Label(row, text="行距:", font=get_font(10), bg=Theme.BG, fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 0))
+        self._create_combobox(row, size_var,
+                              [f"{name}({pt}pt)" for name, pt in FONT_SIZES], width=9,
+                              initial_value=self._size_display(self.settings.get(key, {}).get('size', default_size))
+                              ).pack(side='left', padx=3)
+
+        tk.Label(row, text="行距:", font=get_font(10), bg=Theme.BG,
+                 fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 0))
         ls_val = self.settings.get(key, {}).get('line_spacing', '')
         ls_var = tk.StringVar(value=str(ls_val) if ls_val else '')
-        tk.Entry(row, textvariable=ls_var, font=get_font(10), width=4, relief='solid', bd=1).pack(side='left', padx=3)
-        
-        # 加粗
-        default_bold = DEFAULT_CUSTOM_SETTINGS.get(key, {}).get('bold', False)
-        bold_var = tk.BooleanVar(value=self.settings.get(key, {}).get('bold', default_bold))
-        self._create_inline_toggle(
-            row, "粗", bold_var, font_size=10
-        ).pack(side='left', padx=(6, 0))
-        
-        # 存储变量引用
-        self._adv_vars[key] = {'font': font_var, 'font_en': font_en_var, 'size': size_var, 'line_spacing': ls_var, 'bold': bold_var}
-        
-        # 记录初始值，用于判断用户是否修改过高级设置
-        if not hasattr(self, '_adv_initial_values'):
-            self._adv_initial_values = {}
-        self._adv_initial_values[key] = {
-            'font': font_var.get(),
-            'font_en': font_en_var.get(),
-            'size': size_var.get(),
-            'line_spacing': ls_var.get(),
-            'bold': bold_var.get(),
-        }
-    
+        tk.Entry(row, textvariable=ls_var, font=get_font(10), width=4,
+                 relief='solid', bd=1).pack(side='left', padx=3)
+
+        bold_var = tk.BooleanVar(value=self.settings.get(key, {}).get('bold', False))
+        self._create_inline_toggle(row, "粗", bold_var, font_size=10).pack(
+            side='left', padx=(6, 0))
+
+        self._adv_vars[key] = {'font': font_var, 'font_en': font_en_var,
+                               'size': size_var, 'line_spacing': ls_var,
+                               'bold': bold_var}
+
     def _show_table_align_info(self, event):
         """弹出表格智能对齐规则说明"""
         popup = tk.Toplevel(self)
@@ -1809,21 +2078,6 @@ class CustomSettingsDialog(tk.Toplevel):
         popup.bind('<Button-1>', lambda e: popup.destroy())
         popup.focus_set()
         popup.bind('<FocusOut>', lambda e: popup.destroy())
-    
-    def _toggle_advanced(self):
-        """切换高级设置的折叠/展开"""
-        if self._adv_expanded:
-            self._adv_content.pack_forget()
-            self._adv_toggle_label.configure(text="▸ 高级设置 — 按元素类型独立配置字体/行距")
-            self._adv_expanded = False
-        else:
-            self._adv_content.pack(fill='x', after=self._adv_toggle_frame, pady=(0, 10))
-            self._adv_toggle_label.configure(text="▾ 高级设置 — 按元素类型独立配置字体/行距")
-            self._adv_expanded = True
-        
-        # 更新滚动区域
-        self.content_frame.update_idletasks()
-        self.canvas.configure(scrollregion=self.canvas.bbox('all'))
     
     # ==================== 滚动/辅助方法 ====================
     
@@ -1949,60 +2203,22 @@ class CustomSettingsDialog(tk.Toplevel):
     # ==================== 加载/保存 ====================
     
     def _load_values(self):
-        """加载设置到 UI"""
+        """加载当前格式的生效值到 UI"""
         s = self.settings
         try:
             # 页边距
             for key in ['top', 'bottom', 'left', 'right']:
                 self.margin_vars[key].set(str(s.get('page', {}).get(key, 2.5)))
-            
-            # 标题
-            self.title_font_var.set(s.get('title', {}).get('font_cn', '方正小标宋简体'))
-            self._set_size_var(self.title_size_var, s.get('title', {}).get('size', 22))
-            self.title_line_spacing_var.set(str(s.get('title', {}).get('line_spacing', 28) or ''))
-            self.title_bold_var.set(s.get('title', {}).get('bold', False))
-            
-            # 各级标题
-            self.h1_font_var.set(s.get('heading1', {}).get('font_cn', '黑体'))
-            self.h1_font_en_var.set(s.get('heading1', {}).get('font_en', 'Times New Roman'))
-            self._set_size_var(self.h1_size_var, s.get('heading1', {}).get('size', 16))
-            self.h1_bold_var.set(s.get('heading1', {}).get('bold', False))
-            self.h2_font_var.set(s.get('heading2', {}).get('font_cn', '楷体_GB2312'))
-            self.h2_font_en_var.set(s.get('heading2', {}).get('font_en', 'Times New Roman'))
-            self._set_size_var(self.h2_size_var, s.get('heading2', {}).get('size', 16))
-            self.h2_bold_var.set(s.get('heading2', {}).get('bold', False))
-            self.h3_font_var.set(s.get('heading3', {}).get('font_cn', '仿宋_GB2312'))
-            self.h3_font_en_var.set(s.get('heading3', {}).get('font_en', 'Times New Roman'))
-            self.h4_font_var.set(s.get('heading4', {}).get('font_cn', '仿宋_GB2312'))
-            self.h4_font_en_var.set(s.get('heading4', {}).get('font_en', 'Times New Roman'))
-            
-            # 正文
-            self.body_font_var.set(s.get('body', {}).get('font_cn', '仿宋_GB2312'))
-            self._set_size_var(self.body_size_var, s.get('body', {}).get('size', 16))
-            self.line_spacing_var.set(str(s.get('body', {}).get('line_spacing', 28) or ''))
-            self.body_bold_var.set(s.get('body', {}).get('bold', False))
-            self.global_font_en_var.set(
-                s.get('body', {}).get('font_en', 'Times New Roman')
-            )
-            self.space_before_var.set(str(s.get('body', {}).get('space_before', 0)))
-            self.space_after_var.set(str(s.get('body', {}).get('space_after', 0)))
-            
-            body_size = s.get('body', {}).get('size', 16) or 16
-            indent = s.get('body', {}).get('indent', 32)
-            indent_chars = int(indent / body_size) if body_size else 2
-            self.indent_var.set(f'{indent_chars}字符')
-            
+
             # 表格
             tbl = s.get('table', {})
             self.table_font_var.set(tbl.get('font_cn', '仿宋_GB2312'))
             self._set_size_var(self.table_size_var, tbl.get('size', 12))
             self.table_line_spacing_var.set(str(tbl.get('line_spacing', 22) or ''))
             self.table_header_bold_var.set(tbl.get('header_bold', True))
-            self.table_smart_align_var.set(
-                self.settings.get('table', {}).get('smart_align', False)
-            )
-            
-            # 特殊选项
+            self.table_smart_align_var.set(tbl.get('smart_align', False))
+
+            # 行为开关与页码
             self.first_bold_var.set(s.get('first_line_bold', False))
             self.bold_serial_var.set(s.get('bold_serial', True))
             self.deep_clean_var.set(s.get('deep_clean', False))
@@ -2022,10 +2238,11 @@ class CustomSettingsDialog(tk.Toplevel):
             )
             self.page_number_font_var.set(s.get('page_number_font', '宋体'))
             self._set_size_var(self.page_number_size_var, s.get('page_number_size', 14))
-            self.page_number_offset_var.set(str(s.get('page_number_offset_mm', DEFAULT_PAGE_NUMBER_OFFSET_MM)))
+            self.page_number_offset_var.set(
+                str(s.get('page_number_offset_mm', DEFAULT_PAGE_NUMBER_OFFSET_MM)))
             self.replace_page_number_var.set(s.get('replace_existing_page_number', True))
-            
-            # 高级设置
+
+            # 结束语（元素行）
             for key, vars_dict in self._adv_vars.items():
                 elem = s.get(key, {})
                 vars_dict['font'].set(elem.get('font_cn', '仿宋_GB2312'))
@@ -2033,11 +2250,10 @@ class CustomSettingsDialog(tk.Toplevel):
                 self._set_size_var(vars_dict['size'], elem.get('size', 16))
                 ls = elem.get('line_spacing', '')
                 vars_dict['line_spacing'].set(str(ls) if ls else '')
-                default_bold = DEFAULT_CUSTOM_SETTINGS.get(key, {}).get('bold', False)
-                vars_dict['bold'].set(elem.get('bold', default_bold))
+                vars_dict['bold'].set(elem.get('bold', False))
         except Exception as e:
             print(f"[警告] 加载设置到界面失败: {e}")
-    
+
     def _set_size_var(self, var, pt_value):
         try:
             pt_value = float(pt_value)
@@ -2050,49 +2266,51 @@ class CustomSettingsDialog(tk.Toplevel):
         var.set(f"自定义({pt_value}pt)")
     
     def _reset_defaults(self):
-        import copy
-        self.settings = copy.deepcopy(DEFAULT_CUSTOM_SETTINGS)
+        """恢复默认：清掉当前格式的全部覆盖值，回到基准值。"""
+        active_id = self._config.get('active_preset_id') or 'custom'
+        clear_preset_overrides(self._config, active_id)
+        self._reload_settings()
         self._load_values()
 
     def _save_values(self):
-        """保存当前 UI 值到 self.settings，不写文件、不关闭弹窗。"""
-        current_name = self.settings.get('name', '我的自定义格式')
+        """把弹窗管理的字段写入当前格式的覆盖值。
 
-        # 收集快速设置值
-        page = {key: float(self.margin_vars[key].get()) for key in ['top', 'bottom', 'left', 'right']}
+        值与基准一致时 set_preset_override 自动不记覆盖 ——「已改动」标记
+        始终只反映真实偏离。不做联动派生，每个字段独立落位。
+        """
+        active_id = self._config.get('active_preset_id') or 'custom'
 
-        title_size = self._get_size_from_var(self.title_size_var)
-        h1_size = self._get_size_from_var(self.h1_size_var)
-        h2_size = self._get_size_from_var(self.h2_size_var)
-        body_size = self._get_size_from_var(self.body_size_var)
-        body_ls = self._get_line_spacing(self.line_spacing_var, 28)
-        title_ls = self._get_line_spacing(self.title_line_spacing_var, 28)
-        try:
-            space_before = int(float(self.space_before_var.get()))
-            space_after = int(float(self.space_after_var.get()))
-        except ValueError:
-            space_before = space_after = 0
+        def put(key, field, value):
+            set_preset_override(self._config, active_id, key, field, value)
 
-        # 首行缩进
-        indent_text = self.indent_var.get()
-        indent_chars = int(float(indent_text.replace('字符', '')))
-        indent_pt = indent_chars * body_size
+        # 页面边距
+        for key in ['top', 'bottom', 'left', 'right']:
+            put('page', key, float(self.margin_vars[key].get()))
 
-        body_font = self.body_font_var.get()
-        global_font_en = self.global_font_en_var.get()
-        body_bold = self.body_bold_var.get()
+        # 表格
+        put('table', 'font_cn', self.table_font_var.get())
+        put('table', 'size', self._get_size_from_var(self.table_size_var))
+        table_ls = self.table_line_spacing_var.get().strip()
+        if table_ls:
+            put('table', 'line_spacing', self._get_line_spacing(self.table_line_spacing_var, 22))
+        put('table', 'header_bold', self.table_header_bold_var.get())
+        put('table', 'smart_align', self.table_smart_align_var.get())
+
+        # 行为开关
+        put('space_handling', None, self.space_handling_var.get())
+        put('first_line_bold', None, self.first_bold_var.get())
+        put('bold_serial', None, self.bold_serial_var.get())
+        put('deep_clean', None, self.deep_clean_var.get())
+
+        # 页码
         page_number_style = next(
-            (
-                key for key, label in PAGE_NUMBER_STYLE_OPTIONS.items()
-                if label == self.page_number_style_var.get()
-            ),
+            (key for key, label in PAGE_NUMBER_STYLE_OPTIONS.items()
+             if label == self.page_number_style_var.get()),
             'dash',
         )
         page_number_position = next(
-            (
-                key for key, label in PAGE_NUMBER_POSITION_OPTIONS.items()
-                if label == self.page_number_position_var.get()
-            ),
+            (key for key, label in PAGE_NUMBER_POSITION_OPTIONS.items()
+             if label == self.page_number_position_var.get()),
             'outside',
         )
         try:
@@ -2101,136 +2319,47 @@ class CustomSettingsDialog(tk.Toplevel):
             page_number_offset_mm = DEFAULT_PAGE_NUMBER_OFFSET_MM
         page_number_offset_mm = max(0, min(30, page_number_offset_mm))
 
-        # 构建基础设置 — 正文字体联动到多个元素
-        self.settings = {
-            'name': current_name,
-            'page': page,
-            'title': {
-                'font_cn': self.title_font_var.get(), 'font_en': global_font_en,
-                'size': title_size, 'bold': self.title_bold_var.get(), 'align': 'center', 'indent': 0,
-                'line_spacing': title_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'recipient': {
-                'font_cn': body_font, 'font_en': global_font_en,
-                'size': body_size, 'bold': body_bold, 'align': 'left', 'indent': 0,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'heading1': {
-                'font_cn': self.h1_font_var.get(), 'font_en': self.h1_font_en_var.get(),
-                'size': h1_size, 'bold': self.h1_bold_var.get(), 'align': 'left', 'indent': indent_pt,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'heading2': {
-                'font_cn': self.h2_font_var.get(), 'font_en': self.h2_font_en_var.get(),
-                'size': h2_size, 'bold': self.h2_bold_var.get(), 'align': 'left', 'indent': indent_pt,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'heading3': {
-                'font_cn': self.h3_font_var.get(), 'font_en': self.h3_font_en_var.get(),
-                'size': body_size, 'bold': body_bold, 'align': 'left', 'indent': indent_pt,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'heading4': {
-                'font_cn': self.h4_font_var.get(), 'font_en': self.h4_font_en_var.get(),
-                'size': body_size, 'bold': body_bold, 'align': 'left', 'indent': indent_pt,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'body': {
-                'font_cn': body_font, 'font_en': global_font_en,
-                'size': body_size, 'bold': body_bold, 'align': 'justify', 'indent': indent_pt,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'signature': {
-                'font_cn': body_font, 'font_en': global_font_en,
-                'size': body_size, 'bold': body_bold, 'align': 'right', 'indent': 0,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'date': {
-                'font_cn': body_font, 'font_en': global_font_en,
-                'size': body_size, 'bold': body_bold, 'align': 'right', 'indent': 0,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'attachment': {
-                'font_cn': body_font, 'font_en': global_font_en,
-                'size': body_size, 'bold': body_bold, 'align': 'justify', 'indent': 0,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'closing': {
-                'font_cn': body_font, 'font_en': global_font_en,
-                'size': body_size, 'bold': body_bold, 'align': 'left', 'indent': indent_pt,
-                'line_spacing': body_ls, 'space_before': space_before, 'space_after': space_after
-            },
-            'table': {
-                'font_cn': self.table_font_var.get(), 'font_en': global_font_en,
-                'size': self._get_size_from_var(self.table_size_var), 'bold': False,
-                'line_spacing': self._get_line_spacing(self.table_line_spacing_var, 22),
-                'first_line_indent': 0,
-                'header_bold': self.table_header_bold_var.get(),
-                'smart_align': self.table_smart_align_var.get()
-            },
-            'space_handling': self.space_handling_var.get(),
-            'first_line_bold': self.first_bold_var.get(),
-            'bold_serial': self.bold_serial_var.get(),
-            'deep_clean': self.deep_clean_var.get(),
-            'page_number': self.page_number_var.get(),
-            'page_number_font': self.page_number_font_var.get(),
-            'page_number_size': self._get_size_from_var(self.page_number_size_var),
-            'page_number_style': page_number_style,
-            'page_number_position': page_number_position,
-            'page_number_offset_mm': page_number_offset_mm,
-            'replace_existing_page_number': self.replace_page_number_var.get(),
-        }
+        put('page_number', None, self.page_number_var.get())
+        put('page_number_style', None, page_number_style)
+        put('page_number_position', None, page_number_position)
+        put('page_number_font', None, self.page_number_font_var.get())
+        put('page_number_size', None, self._get_size_from_var(self.page_number_size_var))
+        put('page_number_offset_mm', None, page_number_offset_mm)
+        put('replace_existing_page_number', None, self.replace_page_number_var.get())
 
-        # 应用高级设置覆盖（仅在用户真正修改过时）
-        initial = getattr(self, '_adv_initial_values', {})
-        for key, vars_dict in self._adv_vars.items():
-            if key in self.settings and isinstance(self.settings[key], dict):
-                key_initial = initial.get(key, {})
+        # 结束语（参数表之外的元素）
+        closing_vars = self._adv_vars.get('closing', {})
+        if closing_vars:
+            put('closing', 'font_cn', closing_vars['font'].get())
+            put('closing', 'font_en', closing_vars['font_en'].get())
+            put('closing', 'size', self._get_size_from_var(closing_vars['size']))
+            closing_ls = closing_vars['line_spacing'].get().strip()
+            if closing_ls:
+                put('closing', 'line_spacing',
+                    self._get_line_spacing(closing_vars['line_spacing'], 28))
+            put('closing', 'bold', closing_vars['bold'].get())
 
-                adv_font = vars_dict['font'].get()
-                adv_font_en = vars_dict['font_en'].get()
-                adv_size = self._get_size_from_var(vars_dict['size'])
-                adv_ls_str = vars_dict['line_spacing'].get().strip()
-
-                # 只在值与初始值不同时才覆盖（说明用户主动修改了）
-                if adv_font and adv_font != key_initial.get('font', ''):
-                    self.settings[key]['font_cn'] = adv_font
-                if adv_font_en and adv_font_en != key_initial.get('font_en', ''):
-                    self.settings[key]['font_en'] = adv_font_en
-                if adv_size and vars_dict['size'].get() != key_initial.get('size', ''):
-                    self.settings[key]['size'] = adv_size
-                if adv_ls_str and adv_ls_str != key_initial.get('line_spacing', '').strip():
-                    try:
-                        self.settings[key]['line_spacing'] = int(float(adv_ls_str))
-                    except ValueError:
-                        pass
-                self.settings[key]['bold'] = vars_dict['bold'].get()
-    
     def _save(self):
-        """保存设置 - 快速设置为主，高级设置覆盖"""
+        """保存设置 —— 改动写入当前格式的覆盖值并落盘"""
         try:
-            # 保存当前 UI 值回 self.settings
             self._save_values()
-
-            # 写回 _config 中对应 preset（内置预设只读，自动跳过）
-            self._write_current_settings_to_config()
             save_custom_settings(self._config)
-            
+
             if self.on_save:
                 self.on_save(self.settings)
-            
+
             # 先释放模态锁，再关闭窗口（macOS 上 grab + messagebox + destroy 可能卡死）
             try:
                 self.grab_release()
             except Exception:
                 pass
             self.destroy()
-            
+
         except ValueError as e:
             messagebox.showerror("输入错误", f"请检查输入的数值是否正确：\n{e}", parent=self)
         except Exception as e:
             messagebox.showerror("保存失败", f"保存设置时出错：\n{e}\n\n配置文件路径：{CONFIG_FILE}", parent=self)
-    
+
     def _on_close(self):
         result = messagebox.askyesnocancel("保存设置", "是否保存当前设置？", parent=self)
         if result is None:
@@ -3187,75 +3316,6 @@ class SelectableCard(tk.Frame):
             self.configure(highlightbackground=Theme.BORDER, highlightthickness=1)
 
 
-class PresetCard(tk.Frame):
-    """格式预设卡片"""
-    
-    def __init__(self, parent, text, value, variable, command=None, **kwargs):
-        super().__init__(parent, bg=Theme.CARD, **kwargs)
-        
-        self.value = value
-        self.variable = variable
-        self.selected = False
-        self.command = command  # 自定义点击命令
-        
-        self.configure(
-            highlightbackground=Theme.BORDER,
-            highlightcolor=Theme.BORDER_SELECTED,
-            highlightthickness=1
-        )
-        
-        self.label = tk.Label(
-            self,
-            text=text,
-            font=get_font(12),
-            bg=Theme.CARD,
-            fg=Theme.TEXT,
-            padx=Theme.SPACE_LG,
-            pady=Theme.SPACE_MD
-        )
-        self.label.pack()
-        
-        # 绑定
-        for widget in [self, self.label]:
-            widget.bind('<Button-1>', self._on_click)
-            widget.bind('<Enter>', self._on_enter)
-            widget.bind('<Leave>', self._on_leave)
-            widget.configure(cursor='hand2')
-        
-        self.variable.trace_add('write', self._update_style)
-        self._update_style()
-    
-    def _on_click(self, event=None):
-        self.variable.set(self.value)
-        # 如果有自定义命令，执行它
-        if self.command:
-            self.command()
-    
-    def _on_enter(self, event=None):
-        if not self.selected:
-            self.configure(highlightbackground='#D0CCC6')
-    
-    def _on_leave(self, event=None):
-        self._update_style()
-    
-    def _update_style(self, *args):
-        self.selected = (self.variable.get() == self.value)
-        if self.selected:
-            self.configure(bg=Theme.PRIMARY_LIGHT, highlightbackground=Theme.PRIMARY, highlightthickness=2)
-            self.label.configure(bg=Theme.PRIMARY_LIGHT, fg=Theme.TEXT, font=get_font(12, 'bold'))
-        else:
-            self.configure(bg=Theme.CARD, highlightbackground=Theme.BORDER, highlightthickness=1)
-            self.label.configure(bg=Theme.CARD, fg=Theme.TEXT, font=get_font(12))
-    
-    def set_enabled(self, enabled):
-        if enabled:
-            self.label.configure(fg=Theme.TEXT, cursor='hand2')
-            self.configure(cursor='hand2')
-        else:
-            self.label.configure(fg=Theme.TEXT_MUTED, cursor='arrow')
-            self.configure(cursor='arrow', highlightbackground=Theme.BORDER_LIGHT)
-
-
 class CollapsibleLog(tk.Frame):
     """可折叠的日志区域"""
     
@@ -3909,13 +3969,14 @@ class DocFormatApp:
         self.input_file = tk.StringVar()
         self.output_file = tk.StringVar()
         self.operation = tk.StringVar(value="smart")
-        self.preset = tk.StringVar(value="official")
+        # 预设注册表的活配置：格式区的改动（preset_overrides）都经它即时落盘
+        self._config = load_custom_settings()
+        self.preset = tk.StringVar(value=self._config.get('active_preset_id') or 'custom')
         self.input_files = []   # 多文件模式下存储路径列表
         self._processing_active = False
         self._community_notice_state = None
-        
-        self.preset_cards = []
-        
+
+        self._init_override_style()
         self.create_widgets()
         self.root._on_file_selected = self._on_file_selected
         self._record_community_startup()
@@ -4060,7 +4121,10 @@ class DocFormatApp:
         # 分隔
         tk.Frame(content, bg=Theme.BORDER, height=1).pack(fill='x', pady=Theme.SPACE_LG)
         
-        # ===== 3. 功能选择区 =====
+        # ===== 3. 文档格式区（格式编辑内联，P2 定稿布局） =====
+        self._build_format_area(content)
+
+        # ===== 4. 处理方式 =====
         mode_section = tk.Frame(content, bg=Theme.BG)
         mode_section.pack(fill='x', pady=(0, Theme.SPACE_LG))
         
@@ -4068,7 +4132,7 @@ class DocFormatApp:
         smart_card = SelectableCard(
             mode_section,
             title="智能一键处理",
-            description="自动修复标点符号，并应用标准格式规范，一步到位完成文档处理",
+            description="修复中英文标点混用，并套用上表的格式参数，一步到位",
             value="smart",
             variable=self.operation,
             icon_draw_func=Icons.draw_magic,
@@ -4086,7 +4150,7 @@ class DocFormatApp:
         diag_card = SelectableCard(
             small_cards,
             title="格式诊断",
-            description="仅分析文档问题，不修改文件",
+            description="仅分析文档问题，只出报告不修改文件",
             value="analyze",
             variable=self.operation,
             icon_draw_func=Icons.draw_search,
@@ -4096,8 +4160,8 @@ class DocFormatApp:
         
         punct_card = SelectableCard(
             small_cards,
-            title="标点修复",
-            description="仅修复中英文标点混用",
+            title="仅修标点",
+            description="只统一标点，保留原有字体和段落",
             value="punctuation",
             variable=self.operation,
             icon_draw_func=Icons.draw_edit,
@@ -4105,41 +4169,6 @@ class DocFormatApp:
         )
         punct_card.grid(row=0, column=1, sticky='nsew')
 
-        # ===== 4. 格式预设 =====
-        preset_section = tk.Frame(content, bg=Theme.BG)
-        preset_section.pack(fill='x', pady=(0, Theme.SPACE_LG))
-        
-        # 标题行
-        tk.Label(
-            preset_section,
-            text="格式预设",
-            font=get_font(12),
-            bg=Theme.BG,
-            fg=Theme.TEXT_SECONDARY
-        ).pack(anchor='w', pady=(0, Theme.SPACE_SM))
-        
-        preset_row = tk.Frame(preset_section, bg=Theme.BG)
-        preset_row.pack(fill='x')
-        
-        presets = [
-            ('official', 'GB/T 公文标准'),
-            ('academic', '学术论文'),
-            ('legal', '法律文书'),
-        ]
-        
-        for i, (value, text) in enumerate(presets):
-            card = PresetCard(preset_row, text, value, self.preset)
-            card.pack(side='left', padx=(0 if i == 0 else Theme.SPACE_SM, 0))
-            self.preset_cards.append(card)
-        
-        # 自定义卡片 - 点击直接打开设置窗口
-        self.custom_card = PresetCard(
-            preset_row, '⚙️ 自定义', 'custom', self.preset,
-            command=self._open_custom_settings  # 点击时打开设置窗口
-        )
-        self.custom_card.pack(side='left', padx=(Theme.SPACE_SM, 0))
-        self.preset_cards.append(self.custom_card)
-        
         # ===== 修订标记开关 =====
         revision_row = tk.Frame(content, bg=Theme.BG)
         revision_row.pack(fill='x', pady=(0, Theme.SPACE_SM))
@@ -4488,11 +4517,177 @@ class DocFormatApp:
         self.run_btn.configure(bg=color)
         self.run_label.configure(bg=color)
     
+    # ==================== 格式编辑区（活链接 + 覆盖值，P2） ====================
+
+    def _init_override_style(self):
+        """覆盖过的下拉框用淡橙底标出（vista 主题忽略 foreground，用 fieldbackground）。"""
+        style = ttk.Style(self.root)
+        try:
+            style.configure('Override.TCombobox',
+                            fieldbackground=Theme.PRIMARY_LIGHT,
+                            fg=Theme.PRIMARY,
+                            arrowcolor=Theme.PRIMARY)
+        except tk.TclError:
+            pass
+
+    def _build_format_area(self, parent):
+        """文档格式区：标题行（摘要 + 存为新格式 / 恢复全部）+ 预设面板 + 元素参数表。"""
+        section = tk.Frame(parent, bg=Theme.BG)
+        section.pack(fill='x', pady=(0, Theme.SPACE_LG))
+
+        head = tk.Frame(section, bg=Theme.BG)
+        head.pack(fill='x', pady=(0, Theme.SPACE_SM))
+
+        # 折叠开关：收起后摘要行仍留在标题旁（折叠状态不记忆，每次启动都是展开）
+        self.format_collapsed = False
+        self.collapse_toggle = tk.Label(
+            head, text='▾', font=get_font(12), bg=Theme.BG, fg=Theme.TEXT_SECONDARY,
+            cursor='hand2', padx=4)
+        self.collapse_toggle.pack(side='left')
+        self.collapse_toggle.bind('<Button-1>', lambda e: self.toggle_format_area())
+
+        self.format_title = tk.Label(head, text='文档格式', font=get_font(12, 'bold'),
+                                     bg=Theme.BG, fg=Theme.TEXT, cursor='hand2')
+        self.format_title.pack(side='left')
+        self.format_title.bind('<Button-1>', lambda e: self.toggle_format_area())
+
+        self.format_summary = tk.Label(head, text='', font=get_font(10), bg=Theme.BG,
+                                       fg=Theme.TEXT_MUTED)
+        self.format_summary.pack(side='left', padx=(Theme.SPACE_MD, 0))
+
+        restore_all = tk.Label(head, text='↺ 恢复全部', font=get_font(10), bg=Theme.BG,
+                               fg=Theme.TEXT_MUTED, cursor='hand2', padx=6)
+        restore_all.pack(side='right')
+        restore_all.bind('<Button-1>', lambda e: self.restore_all())
+
+        save_as = tk.Label(head, text='＋ 存为新格式', font=get_font(10, 'bold'),
+                           bg=Theme.BG, fg=Theme.PRIMARY, cursor='hand2', padx=6)
+        save_as.pack(side='right')
+        save_as.bind('<Button-1>', lambda e: self.save_as_new_format())
+
+        # 折叠时整块隐藏，只保留上面那行标题与摘要
+        self.format_body = tk.Frame(section, bg=Theme.BG)
+        self.format_body.pack(fill='x')
+
+        two_col = tk.Frame(self.format_body, bg=Theme.BG)
+        two_col.pack(fill='x')
+
+        # 左：起始格式 + 我的格式（带边框滚动面板，固定高度）
+        left = tk.Frame(two_col, bg=Theme.BG)
+        left.pack(side='left', fill='y', padx=(0, Theme.SPACE_MD))
+        self.preset_column = PresetColumn(left, self, self._custom_format_entries())
+        self.preset_column.pack(fill='x')
+
+        # 右：元素参数表（一行一个元素，9 列，逐行独立编辑）
+        right = tk.Frame(two_col, bg=Theme.BG)
+        right.pack(side='left', fill='both', expand=True)
+        tk.Label(right, text='格式参数（可直接修改）', font=get_font(10), bg=Theme.BG,
+                 fg=Theme.TEXT_MUTED).pack(anchor='w', pady=(0, Theme.SPACE_SM))
+        self.format_table = ElementTable(right, self)
+        self.format_table.pack(fill='x')
+
+        note = tk.Label(right,
+                        text='页边距、页码、表格等其余参数仍在「高级设置」中调整（点此打开）',
+                        font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED,
+                        cursor='hand2')
+        note.pack(anchor='w', pady=(Theme.SPACE_SM, 0))
+        note.bind('<Button-1>', lambda e: self._open_custom_settings())
+
+        self._refresh_format_area()
+
+    def toggle_format_area(self):
+        """折叠 / 展开格式区（摘要行始终可见，一屏内可见「开始处理」）。"""
+        self.format_collapsed = not self.format_collapsed
+        if self.format_collapsed:
+            self.format_body.pack_forget()
+        else:
+            self.format_body.pack(fill='x')
+        self.collapse_toggle.configure(text='▸' if self.format_collapsed else '▾')
+
+    # ---------- 覆盖值交互（显示值 = 预设值 ⊕ 覆盖值） ----------
+
+    def _custom_format_entries(self):
+        return [(p.get('id'), p.get('name') or '我的格式')
+                for p in self._config.get('presets', []) if not p.get('is_builtin')]
+
+    def _persist_config(self):
+        save_custom_settings(self._config)
+
+    def _current_effective(self):
+        return get_effective_preset(self._config, self.preset.get()) or {}
+
+    def _refresh_format_area(self):
+        values = self._current_effective()
+        overrides = get_preset_overrides(self._config, self.preset.get())
+        changed = self.format_table.refresh(values, overrides)
+        name = values.get('name', self.preset.get())
+        if changed:
+            shown = '、'.join(changed[:4])
+            if len(changed) > 4:
+                shown += ' 等 %d 处' % len(changed)
+            self.format_summary.configure(
+                text='当前格式：%s　·　已改动：%s' % (name, shown), fg=Theme.PRIMARY)
+        else:
+            self.format_summary.configure(
+                text='当前格式：%s　·　未做修改' % name, fg=Theme.TEXT_MUTED)
+
+    def select_format(self, format_id):
+        """选中一个起始格式或用户格式，参数表装载该格式的生效值。"""
+        self.preset.set(format_id)
+        self._config['active_preset_id'] = format_id
+        self._persist_config()
+        self.preset_column.set_selected(format_id)
+        self._refresh_format_area()
+
+    def cell_changed(self, element, field, value):
+        current = self._current_effective().get(element, {}).get(field)
+        if current == value:
+            return
+        set_preset_override(self._config, self.preset.get(), element, field, value)
+        self._persist_config()
+        self._refresh_format_area()
+
+    def restore_row(self, element):
+        if not get_preset_overrides(self._config, self.preset.get()).get(element):
+            messagebox.showinfo('提示', '这一行没有改动，无需恢复', parent=self.root)
+            return
+        clear_preset_override_row(self._config, self.preset.get(), element)
+        self._persist_config()
+        self._refresh_format_area()
+
+    def restore_all(self):
+        if not get_preset_overrides(self._config, self.preset.get()):
+            messagebox.showinfo('提示', '当前没有改动', parent=self.root)
+            return
+        clear_preset_overrides(self._config, self.preset.get())
+        self._persist_config()
+        self._refresh_format_area()
+
+    def save_as_new_format(self):
+        """＋ 存为新格式：快照当前生效值为用户格式，自动选中并清空源格式覆盖值。"""
+        from tkinter import simpledialog
+        count = len(self._custom_format_entries()) + 1
+        name = simpledialog.askstring(
+            '存为新格式', '新格式名称：', parent=self.root,
+            initialvalue='我的格式 %d' % count)
+        if not name or not name.strip():
+            return
+        name = name.strip()
+        existing = [p.get('name') for p in self._config.get('presets', [])]
+        if name in existing:
+            messagebox.showwarning('重名', f'已存在名为「{name}」的格式',
+                                   parent=self.root)
+            return
+        new_preset = save_as_new_preset(self._config, self.preset.get(), name)
+        self._persist_config()
+        self.preset.set(new_preset['id'])
+        self.preset_column.rebuild(self._custom_format_entries(), scroll_to_end=True)
+        self._refresh_format_area()
+        self.log_panel.log(f'已存为新格式「{name}」', 'success')
+
     def _on_mode_change(self):
         mode = self.operation.get()
-        enabled = mode in ('smart',)
-        for card in self.preset_cards:
-            card.set_enabled(enabled)
+        # 格式是全流程主轴：三种模式下格式区都可用（docs/ARCHITECTURE.md 2.4）
         # 修订标记仅对"智能一键处理"有效
         if hasattr(self, 'revision_cb'):
             if mode == 'smart':
@@ -4548,11 +4743,15 @@ class DocFormatApp:
         popup.bind('<FocusOut>', lambda e: popup.destroy())
     
     def _open_custom_settings(self):
-        """打开自定义设置窗口"""
+        """打开「高级设置」弹窗（页边距 / 页码 / 表格 / 行为 / 结束语 + 预设管理）。"""
         def on_save(settings):
-            self.preset.set('custom')
-            self.log_panel.log("自定义格式设置已保存", 'success')
-        
+            # 弹窗可能改了预设列表 / 选中项 / 覆盖值，重新对齐主页面
+            self._config = load_custom_settings()
+            self.preset.set(self._config.get('active_preset_id') or 'custom')
+            self.preset_column.rebuild(self._custom_format_entries())
+            self._refresh_format_area()
+            self.log_panel.log("设置已保存", 'success')
+
         CustomSettingsDialog(self.root, on_save=on_save)
 
     def _open_paste_dialog(self):
@@ -4934,19 +5133,22 @@ class DocFormatApp:
                 self._pending_temp_input = None
 
     def _get_selected_preset(self):
-        """把主页面选中的格式解析成完整的 preset dict（预设注册表统一取值）。
+        """把主页面选中的格式解析成完整的生效 preset dict（基准 ⊕ 覆盖值）。
 
-        'custom' 是旧主页面卡片的魔法值，语义是「用户配置里当前选中的预设」；
-        其余值是内置 id（'official' 等）。解析失败返回 None，由调用方兜底。
+        UI 显示与 format_document 处理用同一份结果。解析失败返回 None，
+        由调用方兜底回旧调用方式。
         """
-        selected = self.preset.get() if hasattr(self, 'preset') else 'official'
+        selected = self.preset.get() if hasattr(self, 'preset') else 'custom'
         try:
-            config = load_custom_settings()
-            if selected == 'custom':
-                return get_active_preset(config)
-            preset = get_preset_by_id(config, selected)
-            if preset is not None:
-                return preset
+            effective = get_effective_preset(self._config, selected)
+            if effective is not None:
+                return effective
+        except Exception:
+            pass
+        try:
+            effective = get_effective_preset(load_custom_settings(), selected)
+            if effective is not None:
+                return effective
         except Exception:
             pass
         if selected != 'custom' and selected in PRESETS:
