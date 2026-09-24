@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+*.docx
+!test/*.docx
+
+# Logs
+*.log
+
+# 用户的本地自定义设置不应再被提交
+# （仓库里保留一份干净的默认值用于源码运行模式，但开发者本地的修改不应进版本控制）
+custom_settings.json
+
+# AI API Key 本地配置，包含敏感信息
+ai_settings.json
+ai_glossary.txt
+
+#codeX说让加了一行，但我也不知道加的东西是什么意思
+._*

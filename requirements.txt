@@ -1,0 +1,4 @@
+python-docx>=0.8.11
+pywin32>=305; sys_platform == 'win32'
+# 文件拖拽支持（默认安装）
+tkinterdnd2>=0.3.0; python_version >= '3.9'

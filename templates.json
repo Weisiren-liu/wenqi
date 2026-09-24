@@ -1,0 +1,403 @@
+{
+  "builtin": {
+    "official": {
+      "name": "公文格式",
+      "page": {
+        "top": 3.7,
+        "bottom": 3.5,
+        "left": 2.8,
+        "right": 2.6
+      },
+      "title": {
+        "font_cn": "方正小标宋简体",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "center",
+        "indent": 0
+      },
+      "recipient": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading1": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "left",
+        "indent": 32
+      },
+      "heading2": {
+        "font_cn": "楷体_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "left",
+        "indent": 32
+      },
+      "heading3": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "left",
+        "indent": 32
+      },
+      "heading4": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "left",
+        "indent": 32
+      },
+      "body": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "justify",
+        "indent": 32,
+        "line_spacing": 28
+      },
+      "signature": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "date": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "attachment": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "justify",
+        "indent": 32
+      },
+      "closing": {
+        "font_cn": "仿宋_GB2312",
+        "font_en": "Times New Roman",
+        "size": 16,
+        "bold": false,
+        "align": "left",
+        "indent": 32
+      }
+    },
+    "academic": {
+      "name": "学术论文格式",
+      "page": {
+        "top": 2.5,
+        "bottom": 2.5,
+        "left": 2.5,
+        "right": 2.5
+      },
+      "title": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 18,
+        "bold": true,
+        "align": "center",
+        "indent": 0
+      },
+      "recipient": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading1": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 15,
+        "bold": true,
+        "align": "left",
+        "indent": 0
+      },
+      "heading2": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": true,
+        "align": "left",
+        "indent": 0
+      },
+      "heading3": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading4": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "body": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "justify",
+        "indent": 24,
+        "line_spacing": null
+      },
+      "signature": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "date": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "attachment": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "closing": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 12,
+        "bold": false,
+        "align": "left",
+        "indent": 24
+      }
+    },
+    "legal": {
+      "name": "法律文书格式",
+      "page": {
+        "top": 3.0,
+        "bottom": 2.5,
+        "left": 3.0,
+        "right": 2.5
+      },
+      "title": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": true,
+        "align": "center",
+        "indent": 0
+      },
+      "recipient": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading1": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading2": {
+        "font_cn": "黑体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading3": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading4": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "body": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "justify",
+        "indent": 28,
+        "line_spacing": null
+      },
+      "signature": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "date": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "attachment": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "closing": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 14,
+        "bold": false,
+        "align": "left",
+        "indent": 28
+      }
+    }
+  },
+  "user": {
+    "自定义格式": {
+      "name": "自定义格式",
+      "page": {
+        "top": 3.7,
+        "bottom": 3.5,
+        "left": 2.8,
+        "right": 2.6
+      },
+      "title": {
+        "font_cn": "仿宋",
+        "font_en": "Times New Roman",
+        "size": 42,
+        "bold": false,
+        "align": "center",
+        "indent": 0
+      },
+      "recipient": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "left",
+        "indent": 0
+      },
+      "heading1": {
+        "font_cn": "宋体",
+        "font_en": "Times New Roman",
+        "size": 36,
+        "bold": false,
+        "align": "left",
+        "indent": 44
+      },
+      "heading2": {
+        "font_cn": "楷体_GB2312",
+        "font_en": "Times New Roman",
+        "size": 26,
+        "bold": false,
+        "align": "left",
+        "indent": 44
+      },
+      "heading3": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "left",
+        "indent": 44
+      },
+      "heading4": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "left",
+        "indent": 44
+      },
+      "body": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "justify",
+        "indent": 44,
+        "line_spacing": 28
+      },
+      "signature": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "date": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "right",
+        "indent": 0
+      },
+      "attachment": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "justify",
+        "indent": 44
+      },
+      "closing": {
+        "font_cn": "方正仿宋_GBK",
+        "font_en": "Times New Roman",
+        "size": 22,
+        "bold": false,
+        "align": "left",
+        "indent": 44
+      },
+      "first_line_bold": true
+    }
+  },
+  "last_used": {
+    "scope": "user",
+    "key": "自定义格式"
+  }
+}
