@@ -534,8 +534,11 @@ DEFAULT_CUSTOM_SETTINGS = {
 }
 
 
-# v1.8.0: 配置文件 schema 版本
-CONFIG_SCHEMA_VERSION = 2
+# 配置文件 schema 版本
+#   2 = v1.8.0 预设列表结构
+#   3 = 预设注册表统一（docs/ARCHITECTURE.md 3.1/3.2）：
+#       内置预设加载时注入注册表、持久化时过滤；active_preset_id 允许指向内置 id
+CONFIG_SCHEMA_VERSION = 3
 PAGE_NUMBER_CONFIG_VERSION = 1
 
 # 内置只读预设的 id（与 PRESETS dict key 对应）
@@ -556,10 +559,38 @@ def _make_empty_config():
     """生成一份全新的、空白的配置文件结构。"""
     return {
         'schema_version': CONFIG_SCHEMA_VERSION,
-        'active_preset_id': None,   # 当前选中的自定义预设 id
+        'active_preset_id': None,   # 当前选中的预设 id（可指向内置 id）
         'page_number_config_version': PAGE_NUMBER_CONFIG_VERSION,
         'presets': [_make_default_user_preset()],
+        'builtin_overrides': {},    # 预留：用户对内置预设的字段级覆盖（P2 落地）
     }
+
+
+def _inject_builtin_presets(config):
+    """把内置预设注入预设注册表（只读条目，加载时注入、持久化时过滤）。
+
+    内置定义只来自 scripts.formatter.PRESETS（唯一来源），这里只附加注册表元数据
+    （id / is_builtin），不合并任何默认值 —— 保证经注册表取到的内置预设与直接用
+    PRESETS 格式化的结果完全一致。内置条目排在用户条目前面。
+    """
+    import copy
+    presets = [p for p in config.get('presets', []) if isinstance(p, dict)]
+    existing_ids = {p.get('id') for p in presets}
+    entries = []
+    for builtin_id in BUILTIN_PRESET_IDS:
+        definition = PRESETS.get(builtin_id)
+        if not definition:
+            continue
+        if builtin_id in existing_ids:
+            # 用户预设与内置 id 冲突：以用户项优先并告警（docs/ARCHITECTURE.md 第 5 节）
+            print(f"[警告] 用户预设 id 与内置预设冲突（{builtin_id}），以用户项为准")
+            continue
+        entry = copy.deepcopy(definition)
+        entry['id'] = builtin_id
+        entry['is_builtin'] = True
+        entry.setdefault('name', builtin_id)
+        entries.append(entry)
+    config['presets'] = entries + presets
 
 
 def _migrate_legacy_config(legacy_data):
@@ -635,7 +666,11 @@ def _ensure_page_number_config(config):
 
 
 def load_custom_settings():
-    """加载用户自定义设置，并修复旧配置缺失的 active preset。"""
+    """加载用户自定义设置（schema 2/3），并修复旧配置缺失的 active preset。
+
+    schema 3 起为统一预设注册表：内置预设（is_builtin）在这里注入、保存时被过滤，
+    永不写入用户配置；active_preset_id 允许指向内置 id。
+    """
     if not CONFIG_FILE.exists():
         config = _make_empty_config()
     else:
@@ -646,7 +681,8 @@ def load_custom_settings():
             print(f"[警告] 配置文件读取失败，使用默认: {e}")
             data = None
 
-        if isinstance(data, dict) and data.get('schema_version') == CONFIG_SCHEMA_VERSION:
+        if isinstance(data, dict) and data.get('schema_version') in (2, CONFIG_SCHEMA_VERSION):
+            # schema 2 → 3 只升版本号：用户 presets 与 active_preset_id 原样保留
             config = dict(data)
         else:
             config = _migrate_legacy_config(data)
@@ -661,14 +697,20 @@ def load_custom_settings():
         merged = _merge_settings(DEFAULT_CUSTOM_SETTINGS, preset)
         merged['id'] = preset.get('id') or str(uuid.uuid4())
         merged['name'] = preset.get('name') or '我的自定义格式'
-        merged['is_builtin'] = bool(preset.get('is_builtin', False))
+        # 磁盘上的条目一律按用户项处理（内置项只在加载时注入，不会被持久化）
+        merged['is_builtin'] = False
         _ensure_page_number_defaults(merged)
         merged_presets.append(merged)
 
     config['schema_version'] = CONFIG_SCHEMA_VERSION
     config['presets'] = merged_presets
+    config.setdefault('builtin_overrides', {})
+    _inject_builtin_presets(config)
+
+    # active_preset_id 允许指向内置 id；失配时回退第一份用户预设（默认选中语义不变）
     active_id = config.get('active_preset_id')
-    if not active_id or not any(p.get('id') == active_id for p in merged_presets):
+    registry_ids = {p.get('id') for p in config['presets']}
+    if not active_id or active_id not in registry_ids:
         config['active_preset_id'] = merged_presets[0].get('id')
     return config
 
@@ -676,6 +718,9 @@ def load_custom_settings():
 def save_custom_settings(config):
     """保存配置文件。
     
+    内置预设条目（is_builtin）在写入前剥离 —— 它们只存在于内存注册表
+    （加载时注入），持久化会污染用户配置、且随代码演进产生冲突。
+
     Args:
         config: 完整的 config dict（包含 schema_version、presets 等）
     """
@@ -693,17 +738,22 @@ def save_custom_settings(config):
             config = {
                 'schema_version': CONFIG_SCHEMA_VERSION,
                 'active_preset_id': preset['id'],
-                'presets': [preset]
+                'presets': [preset],
+                'builtin_overrides': {},
             }
-        else:
-            config['schema_version'] = CONFIG_SCHEMA_VERSION
-            _ensure_page_number_config(config)
-            presets = config.get('presets') or []
-            for preset in presets:
-                _ensure_page_number_defaults(preset)
-            if presets and not config.get('active_preset_id'):
-                config['active_preset_id'] = presets[0].get('id')
-        
+
+        config = dict(config)
+        config['schema_version'] = CONFIG_SCHEMA_VERSION
+        _ensure_page_number_config(config)
+        user_presets = [p for p in (config.get('presets') or [])
+                        if isinstance(p, dict) and not p.get('is_builtin')]
+        for preset in user_presets:
+            _ensure_page_number_defaults(preset)
+        if user_presets and not config.get('active_preset_id'):
+            config['active_preset_id'] = user_presets[0].get('id')
+        config['presets'] = user_presets
+        config.setdefault('builtin_overrides', {})
+
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
         return CONFIG_FILE
@@ -711,20 +761,34 @@ def save_custom_settings(config):
         print(f"[错误] 保存配置失败: {e}")
 
 
-def get_active_user_preset(config):
-    """根据 active_preset_id 从 config 中取出当前选中的用户预设。
-    
-    如果 id 不存在或没有 presets，返回第一个，再不行返回新建的默认预设。
+def get_preset_by_id(config, preset_id):
+    """按 id 从预设注册表（内置 + 用户）取条目，找不到返回 None。"""
+    for p in config.get('presets', []):
+        if isinstance(p, dict) and p.get('id') == preset_id:
+            return p
+    return None
+
+
+def get_active_preset(config):
+    """从预设注册表中取出 active_preset_id 指向的预设（内置 / 用户均可）。
+
+    找不到时回退第一份用户预设，再不行返回新建的默认预设。
     """
     presets = config.get('presets', [])
     active_id = config.get('active_preset_id')
-    if active_id:
-        for p in presets:
-            if p.get('id') == active_id:
-                return p
+    active = get_preset_by_id(config, active_id) if active_id else None
+    if active is not None:
+        return active
+    for p in presets:
+        if isinstance(p, dict) and not p.get('is_builtin'):
+            return p
     if presets:
         return presets[0]
     return _make_default_user_preset()
+
+
+# 旧名字，保留给既有调用方/测试
+get_active_user_preset = get_active_preset
 
 
 def _fit_dialog_to_screen(dialog, parent, desired_w, desired_h, min_w, min_h):
@@ -771,7 +835,7 @@ class CustomSettingsDialog(tk.Toplevel):
         
         self.on_save = on_save
         self._config = load_custom_settings()
-        self.settings = get_active_user_preset(self._config)
+        self.settings = get_active_preset(self._config)
         if not self._config.get('active_preset_id') and self.settings.get('id'):
             self._config['active_preset_id'] = self.settings['id']
         self._adv_vars = {}  # 高级模式的变量存储
@@ -794,6 +858,9 @@ class CustomSettingsDialog(tk.Toplevel):
         
         self._create_widgets()
         self._refresh_preset_list()
+        # 下拉框只显示用户项；若 active 原本指向内置预设，
+        # _refresh_preset_list 已把它切回第一份用户预设，这里重新同步 settings
+        self.settings = get_active_preset(self._config)
         self.update_idletasks()   # 确保所有控件完成布局
         self._load_values()
         self.after_idle(self._load_values)  # 事件循环空闲后再刷新一次，兜底
@@ -1361,11 +1428,17 @@ class CustomSettingsDialog(tk.Toplevel):
             self._config['active_preset_id'] = presets[0].get('id')
 
     def _write_current_settings_to_config(self):
-        """把当前 self.settings 写回 _config 中对应的 preset。"""
+        """把当前 self.settings 写回 _config 中对应的 preset。
+
+        内置预设（is_builtin）是只读条目：定义只来自代码，不回写、不持久化
+        （用户对内置预设的微调走 builtin_overrides，在 P2 落地）。
+        """
         active_id = self._config.get('active_preset_id')
         if active_id:
             for i, p in enumerate(self._config.get('presets', [])):
                 if p.get('id') == active_id:
+                    if p.get('is_builtin'):
+                        return
                     self.settings['id'] = active_id
                     self.settings['name'] = p.get('name', self.settings.get('name', '我的自定义格式'))
                     self.settings['is_builtin'] = False
@@ -1434,6 +1507,12 @@ class CustomSettingsDialog(tk.Toplevel):
                     if p.get('id') == active_id), None)
         if not cur:
             return
+        if cur.get('is_builtin'):
+            messagebox.showinfo(
+                '提示', '内置格式不可重命名，请先「+ 新建」一份自定义格式',
+                parent=self.dialog
+            )
+            return
 
         new_name = simpledialog.askstring(
             '重命名预设', '新名称：', parent=self.dialog,
@@ -1455,16 +1534,19 @@ class CustomSettingsDialog(tk.Toplevel):
         self._refresh_preset_list()
 
     def _on_delete_preset(self):
-        """删除当前选中的预设。最后一份不能删（保护）。"""
+        """删除当前选中的预设。内置项只读不可删；最后一份用户预设不能删（保护）。"""
         from tkinter import messagebox
         presets = self._config.get('presets', [])
-        if len(presets) <= 1:
+        user_presets = [p for p in presets if not p.get('is_builtin')]
+        if len(user_presets) <= 1:
             messagebox.showinfo('提示', '至少需要保留一份预设，不能删除最后一份', parent=self.dialog)
             return
 
         active_id = self._config.get('active_preset_id')
-        cur = next((p for p in presets if p.get('id') == active_id), None)
+        cur = next((p for p in user_presets if p.get('id') == active_id), None)
         if not cur:
+            if get_preset_by_id(self._config, active_id):
+                messagebox.showinfo('提示', '内置格式不可删除', parent=self.dialog)
             return
 
         if not messagebox.askyesno(
@@ -1475,7 +1557,7 @@ class CustomSettingsDialog(tk.Toplevel):
             return
 
         self._config['presets'] = [p for p in presets if p.get('id') != active_id]
-        new_active = self._config['presets'][0]
+        new_active = next(p for p in self._config['presets'] if not p.get('is_builtin'))
         self._config['active_preset_id'] = new_active.get('id')
 
         import copy
@@ -2130,15 +2212,8 @@ class CustomSettingsDialog(tk.Toplevel):
             # 保存当前 UI 值回 self.settings
             self._save_values()
 
-            # 写回 _config 中对应 preset
-            active_id = self._config.get('active_preset_id')
-            if active_id:
-                for i, p in enumerate(self._config['presets']):
-                    if p.get('id') == active_id:
-                        self.settings['id'] = active_id
-                        self.settings['is_builtin'] = False
-                        self._config['presets'][i] = self.settings
-                        break
+            # 写回 _config 中对应 preset（内置预设只读，自动跳过）
+            self._write_current_settings_to_config()
             save_custom_settings(self._config)
             
             if self.on_save:
@@ -4858,6 +4933,30 @@ class DocFormatApp:
                     pass
                 self._pending_temp_input = None
 
+    def _get_selected_preset(self):
+        """把主页面选中的格式解析成完整的 preset dict（预设注册表统一取值）。
+
+        'custom' 是旧主页面卡片的魔法值，语义是「用户配置里当前选中的预设」；
+        其余值是内置 id（'official' 等）。解析失败返回 None，由调用方兜底。
+        """
+        selected = self.preset.get() if hasattr(self, 'preset') else 'official'
+        try:
+            config = load_custom_settings()
+            if selected == 'custom':
+                return get_active_preset(config)
+            preset = get_preset_by_id(config, selected)
+            if preset is not None:
+                return preset
+        except Exception:
+            pass
+        if selected != 'custom' and selected in PRESETS:
+            import copy
+            preset = copy.deepcopy(PRESETS[selected])
+            preset['id'] = selected
+            preset['is_builtin'] = True
+            return preset
+        return None
+
     def _process_single_file(self, input_path, output_path, mode, progress_fn, revision_mode=False):
         """
         处理单个文件。
@@ -4868,17 +4967,9 @@ class DocFormatApp:
         temp_docx = None
         temp_output_docx = None
 
-        # 确定空格处理模式
-        preset_name = self.preset.get() if hasattr(self, 'preset') else 'official'
-        if preset_name == 'custom':
-            try:
-                _config = load_custom_settings()
-                _cs = get_active_user_preset(_config)
-                space_mode = _cs.get('space_handling', 'remove_all')
-            except Exception:
-                space_mode = 'remove_all'
-        else:
-            space_mode = 'remove_all'
+        # 确定空格处理模式（与格式化共用同一份 preset 取值）
+        preset_dict = self._get_selected_preset()
+        space_mode = (preset_dict or {}).get('space_handling', 'remove_all')
         try:
             from docx import Document
 
@@ -5033,7 +5124,7 @@ class DocFormatApp:
             self.log_panel.log(f"修复了 {changes} 处标点{suffix}", 'success')
     
     def _run_format(self, input_path, output_path, progress_callback=None, revision_mode=False):
-        preset_name = self.preset.get()
+        preset_dict = self._get_selected_preset()
         
         # 设置 logging handler，让 formatter 的日志输出到日志面板
         import logging
@@ -5054,31 +5145,23 @@ class DocFormatApp:
         
         try:
             cb = progress_callback if progress_callback is not None else self._update_progress
-            bold_serial = True
-            custom_settings = None
-            if preset_name == 'custom':
-                try:
-                    _config = load_custom_settings()
-                    _cs = get_active_user_preset(_config)
-                    custom_settings = _cs
-                    bold_serial = _cs.get('bold_serial', True)
-                except Exception:
-                    pass
-            format_document(input_path, output_path, preset_name,
-                           progress_callback=cb, revision_mode=revision_mode,
-                           bold_serial=bold_serial, custom_settings=custom_settings)
+            if preset_dict is not None:
+                # 统一传完整 preset dict（内置 / 用户预设同一路径）
+                format_document(input_path, output_path,
+                               progress_callback=cb, revision_mode=revision_mode,
+                               bold_serial=preset_dict.get('bold_serial', True),
+                               preset=preset_dict)
+            else:
+                # 兜底：注册表解析失败时退回旧调用方式
+                format_document(input_path, output_path, self.preset.get(),
+                               progress_callback=cb, revision_mode=revision_mode)
         finally:
             formatter_logger.removeHandler(handler)
         
-        if preset_name == 'custom':
-            try:
-                _config = load_custom_settings()
-                custom = get_active_user_preset(_config)
-                preset_label = custom.get('name', '自定义格式') if custom else '自定义格式'
-            except Exception:
-                preset_label = '自定义格式'
+        if preset_dict is not None:
+            preset_label = preset_dict.get('name', self.preset.get())
         else:
-            preset_label = PRESETS.get(preset_name, {}).get('name', preset_name)
+            preset_label = PRESETS.get(self.preset.get(), {}).get('name', self.preset.get())
         self.log_panel.log(f"应用格式: {preset_label}", 'success')
 
 

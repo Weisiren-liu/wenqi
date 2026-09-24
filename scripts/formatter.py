@@ -304,10 +304,20 @@ def get_config_file():
 
 
 # 自定义配置文件路径
+# 配置 schema 版本历史（与 docformat_gui.CONFIG_SCHEMA_VERSION 对应）：
+#   2 = v1.8.0 预设列表结构；3 = 预设注册表统一（内置预设加载时注入、持久化时过滤）
+_SUPPORTED_CONFIG_SCHEMA_VERSIONS = (2, 3)
+
+
 def load_custom_preset():
-    """加载自定义预设"""
+    """加载用户配置里当前选中的预设（兼容旧调用方）。
+
+    新代码应经预设注册表取完整 preset dict 后直接传给 format_document(preset=...)；
+    本函数保留给仍以 preset_name='custom' 调用的旧路径。
+    """
     custom_config_file = get_config_file()
 
+    # 兼容逻辑（保留一轮）：新位置没有配置时，回退读仓库根目录的旧配置
     legacy_config_file = Path(__file__).parent.parent / "custom_settings.json"
     if not custom_config_file.exists() and legacy_config_file.exists():
         custom_config_file = legacy_config_file
@@ -316,13 +326,17 @@ def load_custom_preset():
         try:
             with open(custom_config_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            if isinstance(data, dict) and data.get('schema_version') == 2:
-                presets = data.get('presets', [])
+            if isinstance(data, dict) and data.get('schema_version') in _SUPPORTED_CONFIG_SCHEMA_VERSIONS:
+                presets = [p for p in data.get('presets', [])
+                           if isinstance(p, dict) and not p.get('is_builtin')]
                 active_id = data.get('active_preset_id')
                 if active_id:
                     for preset in presets:
                         if preset.get('id') == active_id:
                             return preset
+                    # active_preset_id 允许指向内置 id（注册表统一后的语义）
+                    if active_id in PRESETS:
+                        return deepcopy(PRESETS[active_id])
                 return presets[0] if presets else None
             return data
         except Exception:
@@ -340,6 +354,10 @@ def _merge_preset_settings(base, overrides):
             merged[key] = deepcopy(value)
     return merged
 
+# 内置预设定义的唯一来源。
+# GUI 侧的预设注册表（docformat_gui._inject_builtin_presets）由此生成只读条目
+# （id 沿用下面的 key：'official'/'academic'/'legal'）；内置定义随版本演进时，
+# 用户配置不会被污染（加载时注入、持久化时过滤）。
 PRESETS = {
     'official': {
         'name': '公文格式',
@@ -1785,36 +1803,58 @@ def add_page_number(
                 _build_footer_line(first_footer, align)
 
 
-def format_document(input_path, output_path, preset_name='official', progress_callback=None, revision_mode=False, bold_serial=True, custom_settings=None):
+def _resolve_preset(preset_name='official', preset=None, custom_settings=None):
+    """把新旧两代入参统一解析成一份完整 preset dict —— 唯一取值入口。
+
+    - preset（完整预设注册表条目）优先：新调用方一律走这里，
+      内置/用户预设不再分流两条代码路径。
+    - preset_name='custom' 是旧调用的魔法值：取用户配置里当前选中的预设；
+      此时若同时给了 custom_settings，则整体作为 preset（保持旧测试行为）。
+    - 其余 preset_name 查内置 PRESETS；custom_settings 在其结果上做字段级合并。
+    """
+    if preset is not None:
+        resolved = deepcopy(preset)
+        if custom_settings:
+            resolved = _merge_preset_settings(resolved, custom_settings)
+        return resolved
+
+    if preset_name == 'custom':
+        if custom_settings:
+            return deepcopy(custom_settings)
+        loaded = load_custom_preset()
+        if loaded is None:
+            logger.warning('Custom preset not found, using official preset')
+            return deepcopy(PRESETS['official'])
+        return deepcopy(loaded)
+
+    if preset_name not in PRESETS:
+        logger.error(f'Unknown preset: {preset_name}')
+        logger.error(f'Available: {", ".join(PRESETS.keys())}')
+        sys.exit(1)
+
+    resolved = deepcopy(PRESETS[preset_name])
+    if custom_settings:
+        resolved = _merge_preset_settings(resolved, custom_settings)
+    return resolved
+
+
+def format_document(input_path, output_path, preset_name='official', progress_callback=None, revision_mode=False, bold_serial=True, custom_settings=None, preset=None):
     """格式化文档
     
     Args:
+        preset_name: 预设名（'official' 等内置 id 或 'custom'），仅供旧调用方兼容；
+            新调用方请直接传 preset=<完整 preset dict>。
+        preset: 完整的预设 dict（注册表条目），优先于 preset_name。
+        custom_settings: 旧式覆盖参数，合并到最终 preset 上
+            （preset_name='custom' 且未传 preset 时例外：整体作为 preset）。
         progress_callback: 可选回调函数，签名为 callback(current, total, stage_text)
     """
     _revision_counter[0] = 0   # 每篇文档从 1 开始计 ID
 
-    # 处理自定义预设
-    if preset_name == 'custom' and custom_settings:
-        preset = deepcopy(custom_settings)
-        logger.info(f'Preset: {preset.get("name", "自定义格式")}')
-    elif preset_name == 'custom':
-        preset = load_custom_preset()
-        if preset is None:
-            logger.warning('Custom preset not found, using official preset')
-            preset = PRESETS['official']
-        else:
-            logger.info(f'Preset: {preset.get("name", "自定义格式")}')
-    elif preset_name not in PRESETS:
-        logger.error(f'Unknown preset: {preset_name}')
-        logger.error(f'Available: {", ".join(PRESETS.keys())}')
-        sys.exit(1)
-    else:
-        preset = PRESETS[preset_name]
-        logger.info(f'Preset: {preset["name"]}')
+    preset = _resolve_preset(preset_name=preset_name, preset=preset,
+                             custom_settings=custom_settings)
+    logger.info(f'Preset: {preset.get("name", preset_name)}')
 
-    if custom_settings and preset_name != 'custom':
-        preset = _merge_preset_settings(preset, custom_settings)
-    
     logger.info(f'Input: {input_path}')
     preset = _adapt_fonts_for_platform(preset)
     
