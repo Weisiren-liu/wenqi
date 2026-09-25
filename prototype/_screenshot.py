@@ -1,4 +1,9 @@
-"""抓取原型窗口的截图，用于核对渲染效果。"""
+"""抓取窗口截图，用于核对渲染效果。
+
+用法：
+    python prototype/_screenshot.py out.png                    # 抓原型窗口
+    python prototype/_screenshot.py out.png "公文格式处理工具"   # 抓指定标题的窗口
+"""
 import ctypes
 import ctypes.wintypes as wt
 import sys
@@ -10,7 +15,7 @@ gdi32 = ctypes.windll.gdi32
 SRCCOPY = 0x00CC0020
 PW_RENDERFULLCONTENT = 0x00000002
 
-TARGET_TITLE = '【原型】自动文档格式处理工具'
+DEFAULT_TITLE = '【原型】自动文档格式处理工具'
 
 
 class BITMAPINFOHEADER(ctypes.Structure):
@@ -88,9 +93,12 @@ def capture(hwnd, path):
 
 
 def main():
-    windows = find_window(TARGET_TITLE)
+    out = sys.argv[1] if len(sys.argv) > 1 else 'prototype.png'
+    target_title = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_TITLE
+
+    windows = find_window(target_title)
     if not windows:
-        print('未找到原型窗口')
+        print('未找到标题含 %r 的窗口' % target_title)
         return 1
     hwnd, title = windows[0]
     print('窗口:', title, 'hwnd=', hwnd)
@@ -99,7 +107,6 @@ def main():
     user32.SetForegroundWindow(hwnd)
     time.sleep(1.2)
 
-    out = sys.argv[1] if len(sys.argv) > 1 else 'prototype.png'
     w, h = capture(hwnd, out)
     print('已保存: %s  (%dx%d)' % (out, w, h))
     return 0
