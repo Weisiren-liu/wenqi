@@ -759,8 +759,10 @@ def get_effective_preset(config, preset_id):
 def set_preset_override(config, preset_id, key, field, value):
     """记录一个覆盖值（字段级；field 为 None 表示整键标量，如行为开关）。
 
-    值与基准一致时不记覆盖，并顺手清掉已有覆盖 ——「已改动」标记
-    始终只反映对基准的真实偏离。
+    两种情况不记覆盖，并顺手清掉已有覆盖 ——「已改动」标记始终只反映
+    对基准的真实偏离：
+      · 值与基准一致
+      · value 为 None（编辑框清空 = 回到基准值，不是「覆盖成空值」）
     """
     base = get_preset_by_id(config, preset_id) or {}
     base_node = base.get(key)
@@ -772,7 +774,7 @@ def set_preset_override(config, preset_id, key, field, value):
     overrides = config.setdefault('preset_overrides', {})
     entry = overrides.setdefault(preset_id, {})
 
-    if value == base_value:
+    if value is None or value == base_value:
         if field is None:
             entry.pop(key, None)
         else:
@@ -1169,6 +1171,11 @@ class ElementTable(tk.Frame):
     grid 布局，列宽由表头统一决定；行首色条 + 行尾 ↺ 标记改动行
     （Win11 vista 主题忽略 ttk 着色，不能靠给 Combobox 上色，
     见 prototype/README.md）。
+
+    窄屏自适应：参数表的请求宽度超过实际可用宽度时，按 COLUMN_STAGES
+    从宽到窄逐级收窄 —— 先隐藏次要列（段前 / 段后，编辑入口收进「高级
+    设置」的段落间距区），还不够再压缩字体列宽。任何一级都不允许出现
+    「列被窗口边缘裁掉」（1120px 窗口实测：全表需 884px、可用 840px）。
     """
 
     COLUMNS = (
@@ -1183,27 +1190,124 @@ class ElementTable(tk.Frame):
         ('space_after', '段后', 4),
     )
 
+    # 收窄阶梯（从宽到窄）：hide = 隐藏的列（次要列优先，段后先于段前），
+    # widths = 该级压缩后的列宽（字符单位，缺省用 COLUMNS 基准宽）。
+    # 隐藏列的字段编辑永远可以在「高级设置」的段落间距区完成。
+    COLUMN_STAGES = (
+        {'hide': (), 'widths': {}},
+        {'hide': ('space_after',), 'widths': {}},
+        {'hide': ('space_after', 'space_before'), 'widths': {}},
+        {'hide': ('space_after', 'space_before'),
+         'widths': {'font_cn': 12, 'font_en': 12, 'size': 9, 'align': 7, 'indent': 7}},
+        {'hide': ('space_after', 'space_before'),
+         'widths': {'font_cn': 9, 'font_en': 9, 'size': 8, 'align': 7, 'indent': 7,
+                    'line_spacing': 4, 'bold': 3}},
+    )
+
     def __init__(self, parent, controller):
         super().__init__(parent, bg=Theme.SURFACE, highlightthickness=1,
                          highlightbackground=Theme.BORDER)
         self.controller = controller
         self.cells = {}
         self.bars = {}
+        self.headers = {}
         self.restore_buttons = {}
         self.row_backgrounds = {}
+        self._hidden_fields = ()
+        self._stage_reqs = None      # 每级的请求宽度（首次贴图后测量缓存）
+        self._applied_stage = None
+        self._fit_pending = False
+        self._fitting = False
 
         tk.Label(self, text='元素', font=get_font(10, 'bold'), bg=Theme.CARD_ALT,
                  fg=Theme.TEXT_SECONDARY, anchor='w', width=9
                  ).grid(row=0, column=1, sticky='w', padx=(Theme.SPACE_SM, 0), pady=6)
         for index, (field, label, width) in enumerate(self.COLUMNS, start=2):
-            tk.Label(self, text=label, font=get_font(10, 'bold'), bg=Theme.CARD_ALT,
-                     fg=Theme.TEXT_SECONDARY, anchor='w', width=width
-                     ).grid(row=0, column=index, sticky='w', pady=6)
+            header = tk.Label(self, text=label, font=get_font(10, 'bold'), bg=Theme.CARD_ALT,
+                              fg=Theme.TEXT_SECONDARY, anchor='w', width=width)
+            header.grid(row=0, column=index, sticky='w', pady=6)
+            self.headers[field] = header
         tk.Label(self, text='', bg=Theme.CARD_ALT
                  ).grid(row=0, column=len(self.COLUMNS) + 2, sticky='ew', pady=6)
 
         for row_index, (element, label) in enumerate(ELEMENTS, start=1):
             self._build_row(row_index, element, label)
+
+        self.bind('<Configure>', self._on_table_configure)
+
+    # ---------- 窄屏自适应（COLUMN_STAGES） ----------
+
+    def _on_table_configure(self, _event):
+        if self._fit_pending or self._fitting:
+            return
+        self._fit_pending = True
+        self.after_idle(self._fit_columns)
+
+    def _column_widgets(self, field):
+        """一列的全部控件：表头 + 各行单元格。"""
+        widgets = [self.headers[field]]
+        widgets += [self.cells[(element, field)][0] for element, _label in ELEMENTS]
+        return widgets
+
+    def _apply_stage(self, stage):
+        """应用一级收窄：隐藏次要列 / 压缩列宽（grid_remove 保留原 grid 配置）。"""
+        hidden = set(stage['hide'])
+        self._fitting = True
+        try:
+            for field, _label, width in self.COLUMNS:
+                widgets = self._column_widgets(field)
+                if field in hidden:
+                    for widget in widgets:
+                        widget.grid_remove()
+                    continue
+                target = stage['widths'].get(field, width)
+                for widget in widgets:
+                    try:
+                        widget.configure(width=target)
+                    except tk.TclError:
+                        pass
+                    widget.grid()
+        finally:
+            self._fitting = False
+
+    def _measure_stages(self):
+        """逐级试铺一遍，缓存每级的请求宽度（字体度量一次会话内不变）。"""
+        reqs = []
+        for stage in self.COLUMN_STAGES:
+            self._apply_stage(stage)
+            self.update_idletasks()
+            reqs.append(self.winfo_reqwidth())
+        self._stage_reqs = reqs
+        self._applied_stage = len(self.COLUMN_STAGES) - 1
+
+    def _fit_columns(self):
+        """选第一级「请求宽度 ≤ 可用宽度」的收窄级别；都不够则用最窄级。"""
+        self._fit_pending = False
+        if not self.winfo_ismapped():
+            return
+        available = self.winfo_width()
+        if available <= 1:
+            return
+        if self._stage_reqs is None:
+            self._measure_stages()
+
+        chosen_index = len(self.COLUMN_STAGES) - 1
+        for index, req in enumerate(self._stage_reqs):
+            if req <= available:
+                chosen_index = index
+                break
+        if chosen_index != self._applied_stage:
+            self._apply_stage(self.COLUMN_STAGES[chosen_index])
+            self._applied_stage = chosen_index
+
+        chosen = self.COLUMN_STAGES[chosen_index]
+        hidden = tuple(field for field, _label, _width in self.COLUMNS
+                       if field in chosen['hide'])
+        if hidden != self._hidden_fields:
+            self._hidden_fields = hidden
+            notify = getattr(self.controller, '_on_table_layout', None)
+            if notify is not None:
+                notify(hidden)
 
     def _build_row(self, row_index, element, label):
         background = Theme.SURFACE if row_index % 2 else Theme.CARD
@@ -1266,9 +1370,9 @@ class ElementTable(tk.Frame):
             var = tk.StringVar()
             widget = tk.Entry(self, textvariable=var, font=font, width=width,
                               relief='solid', bd=1, justify='center')
-            fallback = 28 if field == 'line_spacing' else 0
+            # 空输入 = 清空该格（回到基准值），不落覆盖
             commit = lambda _e, el=element, f=field: self.controller.cell_changed(
-                el, f, self._as_number(var.get(), fallback))
+                el, f, self._as_number(var.get()))
             widget.bind('<FocusOut>', commit)
             widget.bind('<Return>', commit)
         else:
@@ -1284,8 +1388,12 @@ class ElementTable(tk.Frame):
         return widget, var
 
     @staticmethod
-    def _as_number(text, fallback):
-        """行距取整数更符合公文习惯，非整数输入保留小数。"""
+    def _as_number(text, fallback=None):
+        """行距取整数更符合公文习惯，非整数输入保留小数。
+
+        空输入 / 非数值一律返回 fallback（默认 None = 清空该格、回到基准值），
+        由 set_preset_override 统一按「清空」处理。
+        """
         try:
             value = float(str(text).strip())
         except (TypeError, ValueError):
@@ -1343,10 +1451,11 @@ class ElementTable(tk.Frame):
 
 
 class CustomSettingsDialog(tk.Toplevel):
-    """高级设置弹窗 —— 页边距 / 表格 / 页码 / 行为 / 结束语 + 预设管理。
+    """高级设置弹窗 —— 页边距 / 表格 / 页码 / 行为 / 段落间距 / 结束语 + 预设管理。
 
     元素参数在主页面的参数表里逐行内联编辑（P2 定稿，联动派生规则已移除）；
-    这里只管其余参数。改动经 preset_overrides 落到当前格式上（活链接模型）。
+    段前/段后在这里有固定编辑入口（窄屏下参数表会隐藏这两列）。
+    改动经 preset_overrides 落到当前格式上（活链接模型）。
     """
     
     def __init__(self, parent, on_save=None):
@@ -1356,6 +1465,7 @@ class CustomSettingsDialog(tk.Toplevel):
         self.on_save = on_save
         self._config = load_custom_settings()
         self._adv_vars = {}  # 结束语等元素行的变量存储
+        self._spacing_vars = {}  # 段前/段后（段落间距区）变量存储
         self._reload_settings()
         
         # 窗口设置
@@ -1406,7 +1516,7 @@ class CustomSettingsDialog(tk.Toplevel):
         header.pack(fill='x', padx=20, pady=(15, 5))
         
         tk.Label(
-            header, text="⚙️ 高级设置 — 页边距 / 表格 / 页码 / 行为", font=get_font(16, 'bold'),
+            header, text="⚙️ 高级设置 — 页边距 / 表格 / 页码 / 行为 / 段落间距", font=get_font(16, 'bold'),
             bg=Theme.BG, fg=Theme.TEXT
         ).pack(side='left')
         
@@ -1669,6 +1779,12 @@ class CustomSettingsDialog(tk.Toplevel):
             "重新应用页码设置（替换文档中已有的页码）",
             self.replace_page_number_var,
         ).pack(anchor='w', padx=6, pady=2)
+
+        # --- 段前 / 段后（参数表窄屏会隐藏这两列，这里始终可编辑） ---
+        self._create_section(main, "📐 段落间距（段前 / 段后，单位：磅）", pad_x)
+        spacing_frame = tk.Frame(main, bg=Theme.BG)
+        spacing_frame.pack(fill='x', pady=(0, 12), padx=pad_x)
+        self._build_spacing_grid(spacing_frame)
         
         # --- 结束语（参数表之外的元素，在此独立编辑） ---
         self._create_section(main, "🧾 结束语（特此说明等）", pad_x)
@@ -2039,6 +2155,40 @@ class CustomSettingsDialog(tk.Toplevel):
                                'size': size_var, 'line_spacing': ls_var,
                                'bold': bold_var}
 
+    def _build_spacing_grid(self, parent):
+        """段前 / 段后逐元素编辑（窄屏下参数表隐藏这两列时的固定入口）。
+
+        与参数表同一套覆盖值模型：存的是字段级改动，与基准一致时自动不记。
+        """
+        self._spacing_vars = {}
+        for index, (element, label) in enumerate(ELEMENTS):
+            cell = tk.Frame(parent, bg=Theme.BG)
+            cell.grid(row=index // 2, column=index % 2, sticky='w',
+                      padx=(6, 28), pady=2)
+            tk.Label(cell, text=label, font=get_font(10), bg=Theme.BG,
+                     fg=Theme.TEXT, width=7, anchor='w').pack(side='left')
+            vars_dict = {}
+            for field, field_label in (('space_before', '段前'), ('space_after', '段后')):
+                tk.Label(cell, text=field_label, font=get_font(10), bg=Theme.BG,
+                         fg=Theme.TEXT_SECONDARY).pack(side='left', padx=(6, 2))
+                var = tk.StringVar()
+                tk.Entry(cell, textvariable=var, font=get_font(10), width=4,
+                         relief='solid', bd=1).pack(side='left')
+                vars_dict[field] = var
+            self._spacing_vars[element] = vars_dict
+
+    @staticmethod
+    def _parse_spacing(text):
+        """段前/段后输入：空 = 清空该格（None = 回到基准值），数值整数化整。"""
+        text = str(text or '').strip()
+        if not text:
+            return None
+        try:
+            value = float(text)
+        except (TypeError, ValueError):
+            return None
+        return int(value) if value == int(value) else value
+
     def _show_table_align_info(self, event):
         """弹出表格智能对齐规则说明"""
         popup = tk.Toplevel(self)
@@ -2251,6 +2401,13 @@ class CustomSettingsDialog(tk.Toplevel):
                 ls = elem.get('line_spacing', '')
                 vars_dict['line_spacing'].set(str(ls) if ls else '')
                 vars_dict['bold'].set(elem.get('bold', False))
+
+            # 段前 / 段后（空显示 = 未显式设置）
+            for element, vars_dict in self._spacing_vars.items():
+                elem = s.get(element, {})
+                for field, var in vars_dict.items():
+                    value = elem.get(field)
+                    var.set('' if value is None else str(value))
         except Exception as e:
             print(f"[警告] 加载设置到界面失败: {e}")
 
@@ -2338,6 +2495,11 @@ class CustomSettingsDialog(tk.Toplevel):
                 put('closing', 'line_spacing',
                     self._get_line_spacing(closing_vars['line_spacing'], 28))
             put('closing', 'bold', closing_vars['bold'].get())
+
+        # 段前 / 段后（空 = 回到基准值；与基准一致时 set_preset_override 自动不记）
+        for element, vars_dict in self._spacing_vars.items():
+            for field, var in vars_dict.items():
+                put(element, field, self._parse_spacing(var.get()))
 
     def _save(self):
         """保存设置 —— 改动写入当前格式的覆盖值并落盘"""
@@ -4589,9 +4751,10 @@ class DocFormatApp:
         note = tk.Label(right,
                         text='页边距、页码、表格等其余参数仍在「高级设置」中调整（点此打开）',
                         font=get_font(9), bg=Theme.BG, fg=Theme.TEXT_MUTED,
-                        cursor='hand2')
+                        cursor='hand2', justify='left')
         note.pack(anchor='w', pady=(Theme.SPACE_SM, 0))
         note.bind('<Button-1>', lambda e: self._open_custom_settings())
+        self.format_note = note
 
         self._refresh_format_area()
 
@@ -4603,6 +4766,17 @@ class DocFormatApp:
         else:
             self.format_body.pack(fill='x')
         self.collapse_toggle.configure(text='▸' if self.format_collapsed else '▾')
+
+    def _on_table_layout(self, hidden_fields):
+        """参数表窄屏收窄后同步提示：隐藏列的编辑入口在「高级设置」。"""
+        labels = {'space_before': '段前', 'space_after': '段后'}
+        names = [labels[f] for f in hidden_fields if f in labels]
+        base = '页边距、页码、表格等其余参数仍在「高级设置」中调整（点此打开）'
+        if names:
+            text = base + '\n窄屏适配：%s列已收进「高级设置」的段落间距区' % '、'.join(names)
+        else:
+            text = base
+        self.format_note.configure(text=text)
 
     # ---------- 覆盖值交互（显示值 = 预设值 ⊕ 覆盖值） ----------
 

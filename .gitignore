@@ -43,3 +43,7 @@ ai_glossary.txt
 
 # P2 GUI 自检的截图产物（prototype/_check_p2_gui.py 运行时生成）
 prototype/_p2_shots/
+
+# P3 窄屏自检截图与端到端回归产物（运行时生成，不入库）
+prototype/_p3_shots/
+prototype/_e2e_out/
