@@ -27,12 +27,16 @@
 |---|---|
 | 上游 Pro 推广内容 | ✅ 已剔除（`PRO.md`、闲鱼二维码、`ProInfoDialog`、打包引用等） |
 | UI 设计 | ✅ 已定稿（`ARCHITECTURE.md` 3.3 节），有可运行原型 |
-| 正式代码 | ⬜ **一个字都没改**，仍是上游 v1.8.8.2 原样 |
-| 配置层统一（P0/P1） | ⬜ 未开始 |
-| 主页面重排（P2） | ⬜ 未开始 |
-| 文档更新（P3） | ⬜ 未开始 |
+| P0 配置路径收敛 | ✅ 已完成（`a23c3f7`，唯一实现在 `scripts/formatter.py`） |
+| P1 预设注册表统一 | ✅ 已完成（`e2f837d`，schema 2 → 3） |
+| 覆盖值持久化定稿 | ✅ 已定稿并实现（文档 `979f8c9`，实现随 P2） |
+| P2 主页面重排 | ✅ 已完成（`306e6b3`）；窄屏自适应修复（`aa39bf2`） |
+| 真实文档端到端回归 | ✅ 已建立（`e742b42`，对照 P1 之前的排版结果逐项一致） |
+| P3 文档更新 | ✅ 本轮完成（状态表 / README_DEV 配置路径说明已同步） |
+| 产品更名 | ⬜ 未开始，**单独排一轮**（窗口标题、APP_NAME、打包产物、README） |
+| 格式感知体检 | ⬜ 未开始，**放最后**（analyzer 需接入格式参数） |
 
-`git status` 应显示只有 `prototype/` 未跟踪（或已提交，见第 5 节）。
+**正式代码已经过三轮改造**（P0/P1/P2 + 窄屏修复），`git log` 里一阶段一提交。
 
 ---
 
@@ -51,82 +55,65 @@
 6. **格式区可折叠**（点标题），折叠后摘要行仍可见；折叠状态不记忆。
 7. **保留现有公文语义模型**（title / recipient / heading1-4 / body / signature / date /
    attachment / closing），本轮不做通用样式映射。
+8. **窄屏参数表按优先级隐藏次要列**（2026-02 定稿）：段后 → 段前 → 压缩字体列宽，
+   逐级收窄直到不被窗口边缘裁掉；被隐藏列的编辑入口固定在「高级设置」的段落间距区。
+   实现唯一落在 `docformat_gui.ElementTable.COLUMN_STAGES`。
+9. **覆盖值清空语义**：编辑框清空 = **回到基准值**（`set_preset_override` 对 `None`
+   自动清覆盖），不是「覆盖成空值」；与「显示值 = 预设值 ⊕ 覆盖值」一致。
 
 ---
 
-## 4. 下一步做什么
+## 4. 已完成阶段（存档）与当前验证
 
-按 `ARCHITECTURE.md` 第 7 节，**建议先做 P0 + P1**（不碰 UI，可测试，且是 P2 的前提）。
+P0/P1/P2 已按序落地，一阶段一提交；设计细节见 `ARCHITECTURE.md` 第 7/9 节与提交信息。
 
-### P0 — 配置路径收敛
+### 各阶段实现落点
 
-**问题**：配置文件的目录解析有两份独立实现，纯属重复：
-- `docformat_gui.py` 的 `_get_config_dir()`（约 389 行）
-- `scripts/formatter.py` 的 `load_custom_preset()`（约 272 行）—— 自己又写了一遍平台判断
+- **P0 `a23c3f7` 配置路径收敛**：唯一实现 `scripts/formatter.py::get_config_dir()` /
+  `get_config_file()`；GUI 侧 `docformat_gui._get_config_dir()` 只是薄封装。
+- **P1 `e2f837d` 预设注册表统一**：内置起始格式**加载时注入**（`_inject_builtin_presets`，
+  带 `is_builtin: True`）、**持久化时过滤**（`save_custom_settings`）；用户格式 =
+  `config['presets']` 完整快照（uuid）；`format_document()` 统一收 `preset=` 完整 dict，
+  `preset_name='custom'` 旧路径仅为兼容；schema 2 → 3。
+- **P2 `306e6b3` 主页面重排**：格式编辑内联（`ElementTable` 9 列 + 预设面板
+  `PresetColumn`），活链接 + 覆盖值（`preset_overrides` 字段级，对内置与用户格式统一，
+  key = 预设 id）；`CustomSettingsDialog` 降为「高级设置」（页边距/表格/页码/行为/
+  段落间距/结束语），联动派生规则已删。
+- **窄屏修复 `aa39bf2`**：`ElementTable.COLUMN_STAGES` 自适应收窄（见第 3 节第 8 条），
+  段前/段后编辑入口在「高级设置」段落间距区。
+- **端到端回归 `e742b42`**：真实公文样例双侧对照 P1 之前的排版结果，语义指纹逐项一致。
 
-当前两边结果恰好一致，但任一侧单独改动就会分叉。
-
-**做法**：把 `get_config_dir()` 迁入 `formatter.py` 作为唯一实现，GUI 反过来 import 它
-（现有依赖方向是 GUI → formatter，不新增反向依赖）。
-
-**验收**：两侧读到同一文件；39 个原有测试全通过。
-
-### P1 — 预设注册表统一
-
-**问题**：现在有**三套互不相干的预设体系**（`ARCHITECTURE.md` 2.1 节详述）：
-- `formatter.PRESETS`（硬编码 official/academic/legal，不在用户配置里）
-- `config['presets']`（用户自建格式，带 uuid）
-- 主页面硬编码的卡片元组
-
-后果很具体：**用户在设置里新建的格式，在主页面根本看不到**。
-`format_document()` 内部还用 `preset_name == 'custom'` 这个字符串魔法值分流两条代码路径。
-
-另有死代码：`BUILTIN_PRESET_IDS`（`docformat_gui.py` 约 554 行）**定义后全项目从未引用**；
-`is_builtin` 被写入 8 处、只被读 1 次。**原作者已在往统一注册表方向走但没走完**，
-顺着补完即可，不用推倒重来。
-
-**做法**（`ARCHITECTURE.md` 3.1 / 3.2 节）：
-- 内置预设**加载时注入**注册表（带 `is_builtin: True`，id 沿用 `'official'` 等字符串），
-  **持久化时过滤掉** —— 避免内置定义随代码演进时污染用户配置
-- `active_preset_id` 允许指向内置 id（当前 `load_custom_settings()` 会校验并重置）
-- `format_document()` 统一接收完整 preset dict，保留 `preset_name` 仅为兼容旧调用
-  （现有测试大量使用 `format_document(..., 'official')`）
-- schema `2 → 3`
-
-**验收**：新增注册表测试 + 迁移测试通过；**原 39 个测试全通过**；升级后用户原有预设不丢、
-默认选中格式不变。
-
-### P2 — 主页面重排
-
-按 `ARCHITECTURE.md` 3.3 节定稿图实现，对照 `prototype/layout_b.py` 逐项复核。
-
-**核心工作**：把 `CustomSettingsDialog`（一个 1600×1100 的弹窗，约 1500 行）里的编辑控件
-改造成内联面板。注意该弹窗的**快速设置是按控件意图分组 + 联动派生**的（正文字体同时写入
-recipient/signature/date，heading3/4 跟正文联动，英文/数字字体是全局的），
-而新设计是**按元素逐行独立编辑** —— 这个取舍已在原型阶段确认，联动规则不再保留。
-
-**已定的遗留问题**：覆盖值**要持久化** —— 存配置文件独立字段 `preset_overrides`，
-字段级记录，与用户自建格式（`presets` 完整快照）分开存放；对内置与用户格式统一生效。
-完整结论见 `ARCHITECTURE.md` 第 9 节末尾（2026-02 定稿）。
-
-### 可用的验证手段
+### 当前验证手段
 
 ```bash
-# 原有测试（pytest 已装）
-python -m pytest -q                    # 应 39 passed
+# 全量测试（60 项，含注册表/覆盖值/窄屏阶梯）
+python -m pytest -q
 
-# 原型的无头自检（13 项，覆盖预设面板/覆盖值/折叠）
-$env:PYTHONIOENCODING='utf-8'; python prototype/_check_b.py
+# P2 真实 GUI 自检（34 项：启动/切换/改格/存为新格式/重启/折叠/截断）
+$env:PYTHONIOENCODING='utf-8'; python prototype/_check_p2_gui.py
 
-# 原型窗口
+# 窄屏自检（15 项：1120/1000/960 无裁切、宽屏全列、段落间距区、收窄可逆）
+$env:PYTHONIOENCODING='utf-8'; python prototype/_check_p3_narrow.py
+
+# 真实 .docx 端到端回归（对照基线 09d8aa5 的智能一键处理，排版指纹逐项一致）
+# 首次运行会 git worktree 检出基线到 prototype/_e2e_wt/（gitignore，保留复用）
+$env:PYTHONIOENCODING='utf-8'; python prototype/_check_p3_e2e.py
+
+# 原型窗口 / 截图
 python prototype/layout_b.py
-
-# 截图（高 DPI 下也能正确取全窗口）
 python prototype/_screenshot.py out.png
 ```
 
 > 控制台是 GBK，跑含 `▸▾` 等字符的脚本前必须设 `PYTHONIOENCODING=utf-8`，否则报
 > `UnicodeEncodeError`。
+
+### 后续排期（未开始，勿抢先）
+
+1. **产品更名** —— 单独排一轮：窗口标题、APP_NAME、打包产物、README 全量改名。
+2. **格式感知体检** —— 放最后：`analyze_*` 目前不接格式参数，「格式诊断」卡片文案
+   刻意写成「仅分析文档问题」而不是「按上表参数体检」（照抄定稿图是虚假承诺）。
+   做格式感知体检时需给 analyzer 传入生效 preset 并改卡片文案。
+3. **文档小尾巴**：`README.md` 用户文档与新 UI 的截图/描述对齐（本轮只保证不撒谎）。
 
 ---
 
@@ -136,19 +123,27 @@ python prototype/_screenshot.py out.png
 - **历史干净**：`.git` 已删除重建，1 个初始提交，0 个 tag，无 PolyForm 历史残留。
 - **提交者身份**：`docformat-dev <dev@localhost>`（本地配置，未设置全局）。
 
-提交记录（本对话产出）：
+提交记录：
 
 | 提交 | 内容 |
 |---|---|
 | `5b6d176` | init：剔除上游 Pro 推广后的 v1.8.8.2 基线 |
 | `d393e46` | docs：新增架构改造方案 |
-| 见 `git log` | prototype：界面原型与自检脚本（若已提交） |
+| `09d8aa5` | UI 定稿 + 界面原型 + 交接文档 |
+| `a23c3f7` | P0：配置路径收敛（唯一实现 `scripts/formatter.py`） |
+| `e2f837d` | P1：预设注册表统一（内置项加载时注入、持久化时过滤） |
+| `979f8c9` | docs：覆盖值持久化定稿（`preset_overrides` 字段级） |
+| `306e6b3` | P2：主页面重排（格式编辑内联 + 活链接覆盖值） |
+| `4d609f4` | prototype：截图工具支持指定窗口标题 |
+| `aa39bf2` | fix：参数表窄屏自适应（次要列按优先级隐藏，收进高级设置） |
+| `e742b42` | test：真实 .docx 端到端回归（对照 P1 之前） |
+| 本提交 | docs（P3）：状态表与配置路径说明同步到实际代码 |
 
 ---
 
-## 6. 原型里踩过的坑（P2 会再踩一次）
+## 6. 踩过的坑（原型 + 正式改造累计）
 
-`prototype/README.md` 有详细记录，这里只列要点：
+`prototype/README.md` 有原型部分的详细记录，这里只列要点：
 
 1. **`pack_propagate(False)` 会连带锁住高度** —— 内容会被整片裁掉。
 2. **`wraplength` 不约束 Label 的最小请求宽度** —— 它只管换行，长文本照样把容器撑宽。
@@ -162,6 +157,14 @@ python prototype/_screenshot.py out.png
    要用行首色条或自绘控件。
 6. **鼠标滚轮绑定**：只在 canvas 上绑 `<Enter>/<Leave>` 不够（鼠标移到子行上时 canvas 收到
    `Leave`），要递归绑到面板内所有控件。
+7. **PowerShell 5.1 的 `Get-Content`/`Set-Content` 会毁 UTF-8 源文件**（按 cp936 误读、
+   写出 BOM，`docformat_gui.py` 被毁过一次）。改 UTF-8 文本用编辑工具或 Python；
+   必须用 PS 时用 `[System.IO.File]::ReadAllText/WriteAllText` + `UTF8Encoding($false)`。
+8. **驱动真实 GUI 跑批处理必须跑真 `mainloop`**：`run_operation` 的工作线程经 `after()`
+   投递 Tk 调用，用 `update()` 轮询代替 mainloop 会炸
+   `RuntimeError: main thread is not in main loop`（见 `prototype/_check_p3_e2e.py`）。
+9. **grid 布局被挤时是"所有列同比压缩"而不是裁最后一列** —— 表现为末几列被窗口边缘
+   切掉（列头半字）。要"永不裁列"得按实测 `winfo_reqwidth()` 逐级收窄（`COLUMN_STAGES`）。
 
 ---
 
