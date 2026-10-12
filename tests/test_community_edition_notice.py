@@ -63,16 +63,17 @@ def test_build_outputs_do_not_bundle_a_promotional_image():
     assert (PROJECT_ROOT / "assets" / "icon.ico").is_file()
 
 
-def test_ui_keeps_the_community_notice_and_about_dialog():
+def test_ui_keeps_the_startup_notice_and_about_without_the_top_banner():
     source = (PROJECT_ROOT / "docformat_gui.py").read_text(encoding="utf-8")
     for text in (
         "继续使用开源社区版",
-        "此版本为开源社区版",
-        "CommunityNoticeTicker",
         "CommunityEditionDialog",
         "AboutDialog",
     ):
         assert text in source
+
+    assert "CommunityNoticeTicker" not in source
+    assert "community_notice_ticker" not in source
 
 
 def test_about_dialog_keeps_the_mit_attribution():

@@ -232,61 +232,6 @@ def get_font(size=12, weight='normal'):
     return (Theme.FONT_SERIF[0], size, weight)
 
 
-class CommunityNoticeTicker(tk.Frame):
-    """A compact, continuously moving community-edition disclosure."""
-
-    def __init__(self, parent, show_details):
-        super().__init__(parent, bg=Theme.CARD_ALT, highlightbackground=Theme.BORDER,
-                         highlightthickness=1, height=34)
-        self.pack_propagate(False)
-        self._show_details = show_details
-        self._message = COMMUNITY_NOTICE_TEXT
-        self._text_id = None
-
-        badge = tk.Label(
-            self, text='此版本为开源社区版', font=get_font(9, 'bold'),
-            bg=Theme.PRIMARY, fg='white', padx=10, pady=6,
-        )
-        badge.pack(side='left', fill='y')
-        self.canvas = tk.Canvas(self, bg=Theme.CARD_ALT, height=32, highlightthickness=0,
-                                cursor='hand2')
-        self.canvas.pack(side='left', fill='both', expand=True)
-        link = tk.Label(
-            self, text='了解详情  ›', font=get_font(9, 'bold'),
-            bg=Theme.CARD_ALT, fg=Theme.PRIMARY, cursor='hand2', padx=12,
-        )
-        link.pack(side='right', fill='y')
-
-        self.canvas.bind('<Configure>', self._reset_position)
-        self.canvas.bind('<Button-1>', lambda _event: self._show_details())
-        link.bind('<Button-1>', lambda _event: self._show_details())
-        link.bind('<Enter>', lambda _event: link.configure(fg=Theme.PRIMARY_HOVER))
-        link.bind('<Leave>', lambda _event: link.configure(fg=Theme.PRIMARY))
-        self.after(120, self._animate)
-
-    def _reset_position(self, _event=None):
-        width = max(1, self.canvas.winfo_width())
-        if self._text_id is None:
-            self._text_id = self.canvas.create_text(
-                width + 16, 16, text=self._message, anchor='w',
-                font=get_font(10), fill=Theme.TEXT_SECONDARY,
-            )
-        else:
-            self.canvas.coords(self._text_id, width + 16, 16)
-
-    def _animate(self):
-        if not self.winfo_exists() or not self.canvas.winfo_exists():
-            return
-        if self._text_id is None:
-            self._reset_position()
-        bbox = self.canvas.bbox(self._text_id)
-        if bbox is not None and bbox[2] < 0:
-            self.canvas.coords(self._text_id, self.canvas.winfo_width() + 16, 16)
-        else:
-            self.canvas.move(self._text_id, -1.2, 0)
-        self.after(32, self._animate)
-
-
 class CommunityEditionDialog(tk.Toplevel):
     """A local, dismissible notice describing the free community edition."""
 
@@ -4232,11 +4177,6 @@ class DocFormatApp:
             bg=Theme.PRIMARY_LIGHT, fg=Theme.PRIMARY, padx=9, pady=4,
         ).pack(side='left', padx=(Theme.SPACE_SM, 0), pady=(5, 0))
 
-        self.community_notice_ticker = CommunityNoticeTicker(
-            content, show_details=lambda: CommunityEditionDialog(self),
-        )
-        self.community_notice_ticker.pack(fill='x', pady=(0, Theme.SPACE_LG))
-        
         # ===== 2. 文件选择区 =====
         file_section = tk.Frame(content, bg=Theme.BG)
         file_section.pack(fill='x', pady=(0, Theme.SPACE_LG))
