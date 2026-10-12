@@ -34,7 +34,7 @@ CONFIG = os.path.join(SHOTS, 'custom_settings.json')
 SHOTS_TAKEN = []
 
 
-def shot(root, name, title='公文格式处理工具'):
+def shot(root, name, title='文齐 · WenQi'):
     try:
         import time
         from _screenshot import capture, find_window

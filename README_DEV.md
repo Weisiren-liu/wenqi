@@ -1,4 +1,6 @@
-# 开发者说明
+# 文齐 · WenQi 开发者说明
+
+名称、版本与地址集中于 `scripts/branding.py`，GUI 和打包工具共享。源码入口保留 `docformat_gui.py`，打包产物以 `wenqi_` 开头。图标使用 `assets/icon.*`。为兼容已有设置，仍使用历史 `DocFormatter` 配置目录。
 
 ## 配置文件 custom_settings.json 在哪
 

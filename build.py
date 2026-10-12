@@ -30,11 +30,9 @@ def _configure_console_encoding():
 _configure_console_encoding()
 
 # 配置
-APP_NAME = "公文格式处理工具"
-APP_NAME_EN = "DocFormatter"
-VERSION = "1.8.8.2"
+from scripts.branding import APP_NAME, APP_NAME_EN, APP_ID, VERSION
 MAIN_SCRIPT = "docformat_gui.py"
-MACOS_APP_BUNDLE_NAME = os.environ.get("MACOS_APP_BUNDLE_NAME", "公文格式处理助手").strip()
+MACOS_APP_BUNDLE_NAME = os.environ.get("MACOS_APP_BUNDLE_NAME", APP_NAME).strip()
 
 # 输出目录
 DIST_DIR = Path("dist")
@@ -154,7 +152,7 @@ def _patch_macos_info_plist(app_path):
     macos_name = MACOS_APP_BUNDLE_NAME or APP_NAME
     data["CFBundleName"] = macos_name
     data["CFBundleDisplayName"] = macos_name
-    data["CFBundleIdentifier"] = "com.kagurananaga.docformat-gui"
+    data["CFBundleIdentifier"] = APP_ID
     data["CFBundleDevelopmentRegion"] = "zh_CN"
     data["CFBundleLocalizations"] = ["zh_CN", "en"]
 
@@ -391,7 +389,7 @@ def _notarize_and_staple(target_path):
     return _staple_with_retry(target)
 
 
-def _create_macos_installer_dmg(source_path, dmg_path, volume_name="DocFormatter", app_bundle_name=None):
+def _create_macos_installer_dmg(source_path, dmg_path, volume_name=APP_NAME_EN, app_bundle_name=None):
     """生成带 Applications 入口的 macOS 安装 DMG。"""
     source = Path(source_path)
     dmg = Path(dmg_path)
@@ -446,20 +444,22 @@ def build_windows():
     print("构建 Windows 版本")
     print("=" * 50)
     
-    output_name = os.environ.get("WINDOWS_OUTPUT_NAME", "").strip() or "docformat_windows"
+    output_name = os.environ.get("WINDOWS_OUTPUT_NAME", "").strip() or "wenqi_windows"
     
     # 获取 docx 模板路径
     docx_tpl = _get_docx_templates_path()
     dnd_args = _get_tkinterdnd_pyinstaller_args("windows")
     
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--onefile",           # 单文件
         "--windowed",          # 无控制台窗口
         f"--name={output_name}",
         "--clean",
         # 添加数据文件
         "--add-data=scripts;scripts",
+        "--add-data=assets/icon.png;assets",
+        "--add-data=assets/icon.ico;assets",
         # python-docx 模板文件（页眉页脚等必需）
         f"--add-data={docx_tpl};docx/templates" if docx_tpl else "--collect-data=docx",
         "--hidden-import=docx",
@@ -493,18 +493,19 @@ def build_linux():
     print("构建 Linux 版本")
     print("=" * 50)
     
-    output_name = f"docformat_linux"
+    output_name = f"wenqi_linux"
     
     # 获取 docx 模板路径
     docx_tpl = _get_docx_templates_path()
     dnd_args = _get_tkinterdnd_pyinstaller_args("linux")
     
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--onefile",
         f"--name={output_name}",
         "--clean",
         "--add-data=scripts:scripts",
+        "--add-data=assets/icon.png:assets",
         # python-docx 模板文件
         f"--add-data={docx_tpl}:docx/templates" if docx_tpl else "--collect-data=docx",
         "--hidden-import=docx",
@@ -539,7 +540,7 @@ def build_macos():
     is_apple_silicon = any(token in machine for token in ("arm64", "aarch64"))
     output_name = os.environ.get("MACOS_OUTPUT_NAME", "").strip()
     if not output_name:
-        output_name = "docformat_macos_apple_silicon" if is_apple_silicon else "docformat_macos_intel"
+        output_name = "wenqi_macos_apple_silicon" if is_apple_silicon else "wenqi_macos_intel"
     
     # 获取 docx 模板路径
     docx_tpl = _get_docx_templates_path()
@@ -547,14 +548,15 @@ def build_macos():
     # 因此不收集 tkdnd 运行库，避免把用不到的二进制打进 .app。
 
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--onefile",
         "--windowed",          # macOS 生成 .app bundle
         f"--name={output_name}",
         "--clean",
-        "--osx-bundle-identifier=com.kagurananaga.docformat-gui",
+        f"--osx-bundle-identifier={APP_ID}",
         # macOS 路径分隔符与 Linux 相同
         "--add-data=scripts:scripts",
+        "--add-data=assets/icon.png:assets",
         # python-docx 模板文件
         f"--add-data={docx_tpl}:docx/templates" if docx_tpl else "--collect-data=docx",
         "--hidden-import=docx",
@@ -619,10 +621,10 @@ def create_release_notes():
 
 ## 下载
 
-- **Windows**: `docformat_windows.exe` - 双击运行
-- **Linux (麒麟/UOS)**: `docformat_linux` - 添加执行权限后运行
-- **macOS (Intel)**: `docformat_macos_intel.dmg` - 双击挂载后拖入应用程序文件夹
-- **macOS (Apple Silicon)**: `docformat_macos_apple_silicon.dmg` - 双击挂载后拖入应用程序文件夹
+- **Windows**: `wenqi_windows.exe` - 双击运行
+- **Linux (麒麟/UOS)**: `wenqi_linux` - 添加执行权限后运行
+- **macOS (Intel)**: `wenqi_macos_intel.dmg` - 双击挂载后拖入应用程序文件夹
+- **macOS (Apple Silicon)**: `wenqi_macos_apple_silicon.dmg` - 双击挂载后拖入应用程序文件夹
 
 ## 功能
 

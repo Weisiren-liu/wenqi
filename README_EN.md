@@ -1,129 +1,71 @@
-# Document Format GUI
+# WenQi · 文齐
 
-<p align="center">
-  <img src="assets/screenshot.png" alt="Screenshot" width="600">
-</p>
+<p align="center"><img src="assets/icon.png" alt="WenQi icon" width="128"></p>
+<p align="center"><strong>Keep your document formatting consistent.</strong></p>
 
-<p align="center">
-  <strong>One-click fix for Word document formatting issues, making layout adjustments headache-free.</strong>
-</p>
+[中文说明](README.md) · [Developer notes](README_DEV.md) · [Issues](https://github.com/Weisiren-liu/wenqi/issues)
 
-<p align="center">
-  <a href="#download">Download</a> ·
-  <a href="#core-capabilities">Core Capabilities</a> ·
-  <a href="#usage">Usage</a> ·
-  <a href="#faq">FAQ</a> ·
-  <a href="README.md">中文</a>
-</p>
+WenQi is a local Python / Tkinter utility for formatting Word documents. Start from a custom format or a built-in preset, edit parameters directly in the main window, then apply them to one or multiple documents.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-blue" alt="Platform">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/Language-Python-yellow" alt="Language">
-</p>
+![WenQi main window](assets/screenshot.png)
 
----
+## Features and limitations
 
-## Introduction
+- Edit fonts, sizes, bold, alignment, indentation, line and paragraph spacing per document element.
+- Choose official-document, academic or legal starting presets; save your own formats. Overrides remain separate from defaults and can be reset by row or in full.
+- Configure margins, page numbers, tables and cleanup options in advanced settings.
+- Batch-process files or folders, or create a `.docx` from pasted text.
+- Choose automatic formatting, a diagnostic report, or punctuation repair alone.
+- Apply Chinese typography rules while preserving embedded images and attachment media.
+- Optionally produce tracked formatting changes for review in Word.
 
-This is a minimalist tool designed to solve the chaos often found in Word document formatting. Featuring a modern, paper-like UI design, it intelligently identifies issues with punctuation, layout, and fonts, and automatically repairs them according to the Chinese National Standard (**GB/T 9704-2012** for China Communist Party and Government Organs).
+Processing runs locally without document uploads, telemetry or background network requests. The UI is primarily Chinese. Paragraph classification still follows Chinese official-document conventions; academic and legal presets are formatting starting points. Diagnostics do **not yet validate every setting against the selected custom format**. Review the output manually, especially for complex documents or missing fonts.
 
-**Features:**
-- **🎯 Minimalist Operation** — Easy to use, even for computer novices.
-- **🔒 Secure & Offline** — Runs entirely locally. No internet connection required, ensuring data security.
-- **📋 Standard Compliant** — Strictly follows the official formatting standards for Chinese government documents.
+## Run from source
 
----
+Prebuilt packages have not been published here yet. Future packages will be available from [Releases](https://github.com/Weisiren-liu/wenqi/releases).
 
-## Core Capabilities
+Python 3.11 or newer is recommended:
 
-This tool is more than just a simple format painter. It deeply analyzes and fixes common formatting pain points:
+```bash
+git clone https://github.com/Weisiren-liu/wenqi.git
+cd wenqi
+python -m venv .venv
+```
 
-1. **🔣 Standardize Punctuation**: Automatically detects and fixes mixed usage of full-width/half-width symbols (brackets, quotes, commas, periods, etc.), converting them all to standard Chinese punctuation.
-2. **📏 Calibrate Page Margins**: Forcibly unifies page margins to meet the standard requirements for official document layouts.
-3. **🔤 Intelligent Font Adaptation**: Smartly recognizes the hierarchy between headings and body text, automatically applying the correct fonts (e.g., SimHei, FangSong) and font sizes.
-4. **📝 Auto-complete Indentation**: Scans the entire text and adds standard 2-character indentation to paragraphs that lack it.
-5. **📐 Standardize Line Spacing**: Identifies inconsistent line spacing and adjusts it to the standard value (e.g., 28pt) with one click.
-6. **1️⃣ Fix Numbering Styles**: Cleans up chaotic numbering formats, unifying the style (e.g., standardizing mixed usage of "1、" and "1.").
-7. **🎨 Visual Background Adjustment**: Supports adjusting the page background color for a more comfortable editing and reading experience.
-8. **🧹 Clean Font Styles**: Deeply cleans non-standard font colors, weights, underlines, and italics to restore a clean layout.
-9. **📂 .DOC / .WPS Compatible**: Full support for `.doc` and `.wps` file input and output, no manual conversion needed — compatible with both WPS and Microsoft Office ecosystems.
-10. **📊 Table Auto-optimization**: Intelligently detects tables in the document and auto-adjusts column width, row height, and cell formatting for a clean, standardized layout.
-11. **⚙️ Custom Format Configuration**: Allows users to customize page margins, line spacing, fonts, font sizes, and other formatting parameters to suit different layout requirements.
-12. **📦 Ready Out of the Box**: Bundles pywin32 internally — no need to install Python separately. Download and run, truly portable and zero-configuration.
+Activate with `.venv\Scripts\Activate.ps1` in Windows PowerShell, or `source .venv/bin/activate` on macOS / Linux. Then run:
 
----
+```bash
+python -m pip install -r requirements.txt
+python docformat_gui.py
+```
 
-## Download
+Linux requires Tk support (for example `python3-tk` on Debian / Ubuntu). Alternatively, use `bash install.sh` to set up an environment and launch the application.
 
-### Windows Users
+All platforms support `.docx` without Microsoft Word. Windows can additionally convert `.doc` / `.wps` through locally installed Microsoft Office or WPS Office. On macOS / Linux, convert those formats first. Install the selected fonts for consistent results. Drag-and-drop requires `tkinterdnd2` and is currently disabled in packaged macOS builds.
 
-1. **Click to Download**: [**Document_Format_GUI_v1.0.0.exe**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_windows.exe)
-2. Double-click to run after downloading. No Python or additional installation required; it's a portable application.
+## Workflow
 
-> **Note**:
-> * Supports `.docx`, `.doc`, and `.wps` format documents.
+1. Select files and an output location.
+2. Choose a starting format and edit parameters; open advanced settings for other options.
+3. Select a processing mode and start.
+4. Review the output. Default output is a sibling file with a `_processed` suffix.
 
-### Linux Users (Kylin / UOS)
-1. **Click to Download**: [**Linux x86_64 AppImage**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_linux_amd64.AppImage) or [**Linux ARM64 AppImage**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_linux_aarch64.AppImage)
-2. Grant execute permission: `chmod +x docformat_linux_amd64.AppImage`
-3. Double-click to run or execute: `./docformat_linux_amd64.AppImage`
+Saved formats and overrides persist between launches. The historical `DocFormatter` configuration directory is retained for compatibility; see [developer notes](README_DEV.md).
 
-> **Note**:
-> * The Linux build supports `.docx` only. Convert `.doc/.wps` to `.docx` on Windows first.
+## Development
 
----
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+python -m pip install pyinstaller
+python build.py windows   # windows / linux / macos, on the matching host
+```
 
-## Usage
+Outputs use `wenqi_`, such as `wenqi_windows.exe`. GitHub Actions supports manual builds and releases from `v*` tags. Windows 7 builds use Python 3.8 and `requirements-win7.txt`; macOS signing and notarization require repository secrets.
 
-### Step 1: Select File
-Click the "Input" (输入) field at the top of the interface to select the Word document you want to process.
+## Attribution and license
 
-### Step 2: Select Mode
-The interface offers three modes to suit different needs:
+WenQi derives from KaguraNanaga's **MIT-licensed docformat-gui v1.8.8.2**. This branch unifies configuration paths and preset management, introduces inline formatting controls and narrow-window support, and adds the WenQi identity and icon. Original author: **KaguraNanaga**. Fork maintained by **Weisiren-liu**.
 
-| Mode | Description |
-|------|-------------|
-| **🪄 Smart One-click** | **(Recommended)** Fully automatic mode. Performs punctuation repair, layout standardization, and style cleaning all at once. |
-| **🩺 Diagnosis** | Checks for issues only, without modifying the file. Useful for reviewing formatting errors. |
-| **🩹 Punctuation Fix** | Only fixes mixed Chinese/English punctuation usage, preserving the original fonts and paragraph formatting. |
-
-### Step 3: Start Processing
-Click the prominent **"Start Processing" (开始处理)** button in the middle.
-* Once completed, a new file will be generated next to the original file (with the suffix `_processed`).
-* **Your original file will never be overwritten or modified.**
-
----
-
-## FAQ
-
-**Q: Why is the processed document displaying garbled text or incorrect fonts?**
-A: Official Chinese document formatting relies on specific fonts. Please ensure your computer has the following fonts installed (usually standard on Windows):
-- FangSong_GB2312 (仿宋_GB2312)
-- SimHei (黑体)
-- KaiTi_GB2312 (楷体_GB2312)
-
-**Q: Why do I get a "File not found" error?**
-A: Please check if the filename or folder path contains obscure special characters. It is recommended to place the file on the Desktop or in a path with English characters to test.
-
-**Q: Can I batch process multiple files?**
-A: The current version focuses on precise single-file processing. Batch processing features are planned for future updates.
-
----
-
-## Feedback
-
-If this tool helps you, or if you find any bugs, please feel free to contact me:
-
-- **Submit Issue**: [GitHub Issues](https://github.com/KaguraNanaga/docformat-gui/issues)
-- **Email**: legacyofhourai@163.com
-
----
-
-## License
-
-This project is open-source under the [MIT License](LICENSE).
-
-<p align="center">
-  <sub>Made with ❤️ by <a href="https://github.com/KaguraNanaga">KaguraNanaga</a></sub>
-</p>
+The [MIT license](LICENSE) permits use, modification and distribution, including commercial use, with the original copyright and license notice retained. See [third-party licenses](THIRD_PARTY_LICENSES.md), [privacy and disclaimer](DISCLAIMER.md) and [brand asset notes](docs/BRANDING.md).

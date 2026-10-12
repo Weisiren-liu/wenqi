@@ -1356,7 +1356,7 @@ def _add_ppr_change(para, orig_ppr):
 
     change = OxmlElement('w:pPrChange')
     change.set(qn('w:id'),     str(_next_rev_id()))
-    change.set(qn('w:author'), '公文格式工具')
+    change.set(qn('w:author'), '文齐 · WenQi')
     change.set(qn('w:date'),   _rev_date())
 
     if orig_ppr is not None:
@@ -1379,7 +1379,7 @@ def _add_rpr_change(run, orig_rpr):
 
     change = OxmlElement('w:rPrChange')
     change.set(qn('w:id'),     str(_next_rev_id()))
-    change.set(qn('w:author'), '公文格式工具')
+    change.set(qn('w:author'), '文齐 · WenQi')
     change.set(qn('w:date'),   _rev_date())
 
     if orig_rpr is not None:

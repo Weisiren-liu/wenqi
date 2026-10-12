@@ -37,7 +37,7 @@ def shot(root, name):
     try:
         import time
         from _screenshot import capture, find_window
-        windows = find_window('公文格式处理工具')
+        windows = find_window('文齐 · WenQi')
         if not windows:
             print('  [跳过截图] 未找到窗口:', name)
             return

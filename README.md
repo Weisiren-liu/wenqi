@@ -1,261 +1,92 @@
-# Document Format GUI (公文格式处理工具)
+# 文齐 · WenQi
 
-<p align="center">
-  <img src="assets/imageforgithub.png" alt="公文格式助手横幅" width="100%">
-</p>
+<p align="center"><img src="assets/icon.png" alt="文齐图标" width="128"></p>
+<p align="center"><strong>让文档格式整齐一致。</strong></p>
+<p align="center">自定义 Word 格式 · 批量排版 · 标点修复 · 本地处理</p>
+<p align="center"><a href="README_EN.md">English</a> · <a href="README_DEV.md">开发说明</a> · <a href="https://github.com/Weisiren-liu/wenqi/issues">问题反馈</a></p>
 
-<p align="center">
-  <strong>一键修复 Word 文档格式，让排版不再头疼。</strong>
-</p>
+文齐是一个基于 Python / Tkinter 的 Word 文档格式处理工具。以自定义格式或内置预设为起点，直接在主界面调整字体、字号、加粗、对齐、缩进、行距与段落间距，再批量应用到文档。
 
-<p align="center">
-  <a href="#下载安装">立即下载</a> ·
-  <a href="#核心能力">核心能力</a> ·
-  <a href="#使用方法">使用方法</a> ·
-  <a href="#常见问题">常见问题</a> ·
-  <a href="README_EN.md">English</a>
-</p>
+本项目基于 KaguraNanaga 的 `docformat-gui` **MIT 版 v1.8.8.2** 二次开发，保留原始版权与许可声明。本分支完成了配置路径统一、预设注册表整合、主界面重排、窄屏适配，以及 WenQi 更名与图标重绘。
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Windows%207%2B%20%7C%20macOS%20%7C%20Linux-blue" alt="Platform">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/Language-Python-yellow" alt="Language">
-</p>
+## 界面
 
----
+![文齐主界面](assets/screenshot.png)
 
-## 项目简介
+## 能力与边界
 
-这是一个专为解决 Word 文档格式混乱问题而设计的极简工具。它采用了现代化的纸质感 UI 设计，能够智能识别文档中的标点、排版和字体问题，并可以根据国家标准（GB/T 9704-2012）进行一键自动化修复。
+- **格式直接编辑**：主标题、主送机关、一级至四级标题、正文、落款、日期和附件可分别设置中英文字体等参数。
+- **格式预设**：自定义格式默认选中，另有公文、学术论文、法律文书起始预设。修改值与预设分开保存，可恢复单行或全部参数，也可存为新格式。
+- **高级设置**：页边距、页码样式与位置、表格、段落间距，以及样式清洗等行为。
+- **批量处理**：多选文件或选择文件夹，统一输出；也可粘贴文本生成 `.docx`。
+- **三种处理方式**：智能处理（修标点并应用格式）、格式诊断（只出报告）、仅修标点（保留原有排版）。
+- **中文排版**：标点规范化、中文禁则、标题识别、页码和表格调整，保留内嵌图片及附件媒体节点。
+- **处理修订**：可输出修订标记，供 Word 中复核格式变化。
+- **离线运行**：文档处理在本地完成，无文档上传、遥测或后台网络请求。
 
-**特点：**
+当前段落识别仍以中文公文元素为基础，论文和法律预设提供的是排版起点。**格式诊断尚未按当前自定义参数逐项校验**。处理结果需要人工复核，字体缺失、复杂表格和特殊结构可能影响最终效果。
 
-* **🎯 极简操作** — 即使是电脑小白也能上手即用
-* **🔒 安全离线** — 纯本地运行，数据不联网，保障公文安全
-* **📋 标准规范** — 严格遵循党政机关公文格式标准
+## 运行
 
-**v1.8.8.2 更新：**
+当前仓库提供源码，预编译安装包尚未发布。后续安装包将在 [Releases](https://github.com/Weisiren-liu/wenqi/releases) 提供。
 
-* **🛠️ 提示窗口优化** — 启动提示窗口加宽加高、支持调整大小和内容滚动，避免高 DPI 或小屏幕时信息被截断
+推荐 Python 3.11 或更高版本：
 
-**v1.8.8.1 更新：**
-
-* **🛡️ 免费开源提示升级** — 主界面、启动提示、自定义设置和关于窗口明确声明本软件完全免费开源；启动提示在第 1、3、7、10、20 次打开时显示
-
-**v1.8.8 更新：**
-
-* **📄 页码设置优化** — 支持四种页码样式、居中或奇偶页外侧位置，并可安全替换已有页码而不覆盖正常页脚内容
-* **🈶 中文换行规则** — 为正文、表格和页眉页脚启用中文禁则，避免标点出现在新行行首
-* **🔤 标题字体细分** — 一级至四级标题均可分别设置中文字体与英文/数字字体
-* **🖼️ 图片与附件保护** — 保留内嵌图片和媒体节点；独立“附件/附件1”等标记另起页并保持后续标题格式
-* **🛡️ 免费开源声明** — 首次启动显示免费声明；提示仅本地计数、低频显示，不联网或收集数据
-
-## 使用许可
-
-本项目基于 [MIT 许可证](LICENSE) 开源，可自由使用、修改和分发，包括商业用途。分发时请保留原始版权声明和许可声明。第三方依赖许可证信息详见 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)。
-
----
-
-<p align="center">
-  <img src="assets/screenshot.png" alt="软件截图" width="900">
-</p>
-
-## 核心能力
-
-本工具不仅仅是简单的格式刷，它能深度识别并修复以下常见痛点：
-
-1. **🔣 符号标准化**：自动检测并修复括号、引号、逗号、句号、分号等全角半角混用问题，一律调整为中文规范符号。
-2. **📏 页边距校准**：强制统一页边距设置，符合公文版心要求。
-3. **🔤 字体智能适配**：智能识别小标题与正文层级，自动匹配对应的字体（如黑体、仿宋）和字号。
-4. **📝 缩进自动补全**：扫描全文，为缺失首行缩进的段落自动添加标准的 2 字符缩进。
-5. **📐 行距统一规范**：识别文档中不统一的行距设置，一键调整为标准行距（如 28 磅）。
-6. **1️⃣ 序号风格修正**：自动清洗混乱的序号格式，统一风格（例如将混用的"1、"和"1."统一规范化）。
-7. **🎨 视觉背景调整**：支持调整页面背景颜色，提供更舒适的编辑阅读体验。
-8. **🧹 字体样式清洗**：深度清理文档中不规范的字体颜色、粗细、下划线及斜体，还原清爽版面。
-9. **📂 .DOC / .WPS 兼容**：完整支持 `.doc` 和 `.wps` 格式的输入与输出，无需手动转换，兼容 WPS 及 Microsoft Office 生态。
-10. **📊 表格自动调整**：智能识别文档中的表格，自动调整列宽、行高及单元格格式。默认保留原始对齐方式，自定义模式下可开启按内容类型智能对齐（数字靠右、短文本居中等）。
-11. **⚙️ 自定义格式配置**：支持用户自定义页边距、行距、字体字号等格式参数，满足不同排版需求。
-12. **🅱️ 灵活加粗控制**：标题、各级标题、正文等均可独立设置加粗，高级设置中可逐元素精细控制。
-13. **📦 开箱即用**：内置 pywin32 组件，无需额外安装 Python 环境，下载即用，真正的绿色免配置。
-
----
-
-## 下载安装
-
-### Windows 10/11 用户
-
-1. **点击下载**：[**Document_Format_GUI.exe**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_windows.exe)
-2. 下载后双击即可运行，无需安装 Python，绿色纯净。
-
-> **注意**：
-> * 支持 `.docx`、`.doc` 及 `.wps` 格式文档。
-
-### Windows 7/8 用户
-
-1. **点击下载**：[**Document_Format_GUI_Win7.exe**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_windows_win7.exe)
-2. 下载后双击即可运行，无需安装 Python。
-
-> **注意**：
-> * 需要 Windows 7 SP1 或更高版本
-> * 需要安装 Microsoft Office 或 WPS Office 才能处理 `.doc` / `.wps` 格式
-> * 推荐使用 `.docx` 格式以获得最佳兼容性
-> * 如果双击后闪退，请安装 [Visual C++ Redistributable 2015-2022](https://aka.ms/vs/17/release/vc_redist.x64.exe)
-
-### macOS 用户
-
-1. **按芯片下载对应版本：**
-   * **Intel 芯片（x86_64）**：[**Document_Format_GUI_Intel.dmg**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_macos_intel.dmg)
-   * **Apple Silicon（M1 / M2 / M3 / M4）**：[**Document_Format_GUI_Apple_Silicon.dmg**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_macos_apple_silicon.dmg)
-
-2. **安装步骤**：
-   1. 双击下载的 `.dmg` 文件，弹出安装窗口
-   2. 将窗口中的应用图标拖拽到 **Applications（应用程序）** 文件夹入口中
-   3. 关闭安装窗口，弹出（推出）DMG 磁盘映像
-
-3. **打开应用**：
-
-   发布包支持 Developer ID 签名；如果仓库已配置完整 Apple 公证密钥，构建时会自动完成公证。当前如果尚未配置公证密码，首次打开仍可能需要在「隐私与安全性」里手动放行。
-
-   <details>
-   <summary>如果你用的是未公证的测试版 / 自行打包版，首次打开被拦截怎么办</summary>
-
-   1. 双击应用，在弹出的提示框点 **「完成」**
-   2. 打开 **系统设置** → **隐私与安全性**
-   3. 向下滚动，在「安全性」区域找到"已阻止 XXX 以保护你的 Mac"的提示
-   4. 点击 **「仍要打开」**，输入系统密码确认即可
-   5. 之后再次使用直接双击，无需重复
-
-   > 注意：macOS Sequoia(15) 起已取消"右键→打开"的绕过方式，只能走上面系统设置里的「仍要打开」。
-   </details>
-
-> **注意**：
-> * macOS 版本仅支持 `.docx` 文件；`.doc/.wps` 需要先转换为 `.docx`。
-> * 公文字体（仿宋_GB2312、黑体等）macOS 不自带，建议提前安装对应字体以获得最佳效果。未安装时工具会自动回退到 macOS 系统字体。
-> * 当前 macOS 打包版默认关闭文件拖拽入口，优先保证 Intel / Apple Silicon 两个版本都能稳定打开。选择文件、批量文件夹、粘贴文本生成 docx 等功能不受影响。
-
-### 国产系统用户（麒麟 / 统信 UOS / 深度 / 中标麒麟 等）
-
-> ⚠️ 目前为测试版本，欢迎在 Issues 反馈问题（请注明系统名称和版本）
-
-#### 方式一：下载预编译版本（推荐）
-
-**第一步：查询当前架构**，在终端运行：
 ```bash
-uname -m
+git clone https://github.com/Weisiren-liu/wenqi.git
+cd wenqi
+python -m venv .venv
 ```
 
-| 输出结果 | 适用硬件 | 下载链接 |
-|---|---|---|
-| `x86_64` | Intel / AMD / 兆芯 / 海光 | [**docformat_linux_amd64.AppImage**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_linux_amd64.AppImage) |
-| `aarch64` | 飞腾 / 鲲鹏 / 树莓派 | [**docformat_linux_aarch64.AppImage**](https://github.com/KaguraNanaga/docformat-gui/releases/latest/download/docformat_linux_aarch64.AppImage) |
+Windows PowerShell：
 
-**第二步：赋予执行权限并运行**
-```bash
-chmod +x docformat_linux_amd64.AppImage   # ARM64 用户替换为 docformat_linux_aarch64.AppImage
-./docformat_linux_amd64.AppImage
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python docformat_gui.py
 ```
 
-> 如果双击无反应，请在文件管理器中右键 → 属性 → 勾选"允许作为程序执行"。部分系统缺少 FUSE 时，可运行 `./docformat_linux_amd64.AppImage --appimage-extract-and-run`，或改用源码运行方式。
+macOS / Linux：
 
-#### 方式二：源码运行（binary 报错时的备选）
-
-适合 binary 无法运行的情况（如 GLIBC 版本不匹配、龙芯等其他架构）：
 ```bash
-# 1. 下载源码（或从 Releases 下载源码压缩包）
-git clone https://github.com/KaguraNanaga/docformat-gui.git
-cd docformat-gui
-
-# 2. 运行安装助手（自动检测环境、安装依赖、启动程序）
-bash install.sh
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python docformat_gui.py
 ```
 
-> **注意**：
-> * Linux 版本仅支持 `.docx` 文件；`.doc/.wps` 请先在 Windows 上另存为 `.docx`
-> * 龙芯（LoongArch）用户请使用方式二
+Linux 需要系统 Tk 支持，例如 Debian / Ubuntu 的 `python3-tk`。也可在项目目录执行 `bash install.sh`，由安装助手创建环境并启动。
 
----
+| 平台 | 文档支持 |
+|---|---|
+| Windows | `.docx`；`.doc` / `.wps` 转换需本机 Microsoft Office 或 WPS Office |
+| macOS / Linux | `.docx`；其他格式请先转换 |
 
-## 使用方法
+`.docx` 处理无需安装 Microsoft Word。请安装所选中文字体；字体回退可能改变外观。拖拽依赖 `tkinterdnd2`，未安装时仍可用按钮选择文件；macOS 打包版当前关闭拖拽。
 
-### 第一步：选择文件
-点击界面上方的「输入」栏，选择你需要处理的 Word 文档。
+## 使用
 
-### 第二步：选择模式
-界面提供了三种处理模式，满足不同需求：
+1. 选择输入文件（支持多选）和输出位置。
+2. 在“文档格式”中选择起始格式，直接修改参数；更多选项在“高级设置”。
+3. 选择处理方式，点击“开始处理”。
+4. 复核输出文件，默认在原文件旁生成带 `_processed` 后缀的新文件。
 
-| 模式 | 适用场景 |
-|------|----------|
-| **🪄 智能一键处理** | **(推荐)** 全自动模式。同时进行标点修复、排版规范和样式清洗，一步到位。 |
-| **🩺 格式诊断** | 只想看看文档有哪些问题，但暂时不想修改文件。 |
-| **🩹 标点修复** | 仅修复中英文标点混用的情况，保留原文档的字体和段落格式。 |
+格式和修改值重启后继续保留。为兼容已有设置，更名后仍使用 `DocFormatter` 用户配置目录，详见 [开发说明](README_DEV.md)。
 
-### 第三步：开始处理
-点击中间醒目的 **「开始处理」** 按钮。
-* 处理完成后，工具会自动在原文件旁边生成一个新的文件（文件名后缀为 `_processed`）。
-* **你的原文件永远不会被覆盖或修改，请放心使用。**
+## 开发与打包
 
----
-
-## 常见问题
-
-**Q：处理后的文档打开是乱码或字体不对？**
-A：公文格式依赖特定的字体。请确保你的电脑安装了以下字体（Windows 通常自带）：
-- 仿宋_GB2312
-- 黑体
-- 楷体_GB2312
-
-**Q：macOS 上提示"已损坏，无法打开"怎么办？**
-A：正式发布版不应该出现这个问题。请确认下载的是最新 Release；如果你用的是自行打包版或未公证测试版，可以在终端中执行以下命令移除隔离属性后再打开（按你下载的版本二选一）：
 ```bash
-# Intel 芯片
-xattr -cr /Applications/docformat_macos_intel.app
-# Apple Silicon（M 系列）
-xattr -cr /Applications/docformat_macos_apple_silicon.app
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+python -m pip install pyinstaller
+python build.py windows   # 在对应系统运行 windows / linux / macos
 ```
 
-**Q：Windows 7 上运行闪退或报错怎么办？**
-A：请确保：
-1. 已安装 Windows 7 SP1
-2. 已安装 [Visual C++ Redistributable 2015-2022](https://aka.ms/vs/17/release/vc_redist.x64.exe)
-3. 下载的是 Win7 专用版本（文件名含 `_win7`）
+产物以 `wenqi_` 开头，如 `wenqi_windows.exe`。GitHub Actions 支持手动构建；推送 `v*` 标签会构建并发布多平台包。Windows 7 兼容构建使用 Python 3.8 和 `requirements-win7.txt`，macOS 签名与公证需自行配置仓库密钥。
 
-**Q：Linux 上提示 “Exec format error” 或无法执行？**
-A：通常是架构不匹配。请先运行 `uname -m`，然后下载对应的 x86_64 或 ARM64 版本。
+GUI 在 `docformat_gui.py`，排版核心在 `scripts/formatter.py`，诊断在 `scripts/analyzer.py`，Windows 转换在 `scripts/converter.py`。品牌信息集中于 `scripts/branding.py`。详细设计见 [架构说明](docs/ARCHITECTURE.md)。
 
-**Q：Linux 上提示 “GLIBC_2.xx not found” 或启动失败？**
-A：系统的 glibc 版本过低或不兼容。建议改用源码方式运行：`bash install.sh`。
+## 许可与来源
 
-**Q：Linux 上提示缺少 tkinter 或无法创建窗口？**
-A：请先安装系统依赖（例如 `sudo apt-get install -y python3-tk`），然后再运行 `bash install.sh`。
+[MIT License](LICENSE) 允许使用、修改和分发，包括商业用途；分发时须保留原始版权与许可声明。原作者：**KaguraNanaga**。二次开发与维护：**Weisiren-liu**。本项目基线为上游 MIT 版 v1.8.8.2。
 
-**Q：为什么提示「文件不存在」？**
-A：请检查文件名或文件夹路径中是否包含极其生僻的特殊字符。建议将文件放在桌面或纯英文路径下尝试。
-
-**Q：可以批量处理多个文件吗？**
-A：支持。点击输入框时可多选文件（按住 Ctrl 或 Shift），选择多个文件后输出框会自动切换为目录选择模式，处理完成后所有文件统一保存到指定目录，文件名自动添加 `_processed` 后缀。
-
-**Q：龙芯（LoongArch）能用吗？**
-A：目前没有 LoongArch 预编译版本。请使用源码方式运行：`bash install.sh`。
-
----
-
-## 反馈与建议
-
-如果这个工具帮到了你，或者你发现了 Bug，欢迎联系我：
-
-- **提交 Issue**: [GitHub Issues](https://github.com/KaguraNanaga/docformat-gui/issues)
-- **邮件联系**: legacyofhourai@163.com
-
----
-
-## 数据安全
-
-🔒 **本工具所有操作均在本地完成**，不会上传任何文档内容到服务器或云端。无网络通信、无数据收集、无遥测追踪。源代码完全开放，欢迎审查。
-
-详见 [数据安全与免责声明](DISCLAIMER.md)。
-
----
-
-<p align="center">
-  <sub>Made with ❤️ by <a href="https://github.com/KaguraNanaga">KaguraNanaga</a></sub>
-</p>
+参见 [第三方依赖](THIRD_PARTY_LICENSES.md)、[隐私与免责声明](DISCLAIMER.md)、[品牌资源](docs/BRANDING.md)。反馈请提交 [Issue](https://github.com/Weisiren-liu/wenqi/issues)。

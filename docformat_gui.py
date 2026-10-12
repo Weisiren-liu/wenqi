@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-公文格式处理工具 - 纸质感极简风格 v2
+文齐 · WenQi - 自动文档格式处理工具
 优化：更大图标、更好排版、卡片式选择
 """
 
@@ -21,6 +21,7 @@ PROJECT_ROOT = Path(__file__).parent
 SCRIPT_DIR = PROJECT_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from scripts.branding import APP_NAME, VERSION, PROJECT_URL
 from scripts.analyzer import analyze_punctuation, analyze_numbering, analyze_paragraph_format, analyze_font
 from scripts.formatter import (
     format_document, PRESETS, DEFAULT_PAGE_NUMBER_OFFSET_MM, get_config_dir,
@@ -117,7 +118,7 @@ except Exception as e:
     _DND_DISABLED_REASON = f"拖拽运行库不可用：{e}"
     _DND_AVAILABLE = False
 
-__version__ = '1.8.8.2'
+__version__ = VERSION
 
 COMMUNITY_NOTICE_SCHEDULE = (1, 3, 7, 10, 20)
 COMMUNITY_NOTICE_SCHEDULE_VERSION = 4
@@ -292,7 +293,7 @@ class CommunityEditionDialog(tk.Toplevel):
     def __init__(self, app):
         super().__init__(app.root)
         self.app = app
-        self.title(f'欢迎使用公文格式处理工具社区版 v{__version__}')
+        self.title(f'欢迎使用{APP_NAME}社区版 v{__version__}')
         self.configure(bg=Theme.BG)
         self.resizable(False, False)
         self.transient(app.root)
@@ -300,7 +301,7 @@ class CommunityEditionDialog(tk.Toplevel):
         body = tk.Frame(self, bg=Theme.BG, padx=24, pady=20)
         body.pack(fill='both', expand=True)
         tk.Label(
-            body, text=f'欢迎使用公文格式处理工具社区版 v{__version__}',
+            body, text=f'欢迎使用{APP_NAME}社区版 v{__version__}',
             font=get_font(16, 'bold'), bg=Theme.BG, fg=Theme.TEXT,
         ).pack(anchor='w')
 
@@ -336,13 +337,14 @@ class AboutDialog(tk.Toplevel):
         body = tk.Frame(self, bg=Theme.BG, padx=24, pady=20)
         body.pack(fill='both', expand=True)
         about_text = (
-            f'公文格式处理工具  v{__version__}\n\n'
-            '一键将 Word 文档排版为标准公文格式\n\n'
+            f'{APP_NAME}  v{__version__}\n\n'
+            '自定义 Word 格式、批量排版与标点修复\n\n'
             '本软件完全免费开源，不收取任何费用。\n'
             '如您从网络购买到本工具，请立刻举报商家并要求退款。\n\n'
-            '开发者：KaguraNanaga\n'
+            '原开发者：KaguraNanaga（MIT v1.8.8.2）\n'
+            '二次开发与维护：Weisiren-liu\n'
             '许可证：MIT License\n'
-            '项目地址：github.com/KaguraNanaga/docformat-gui\n\n'
+            f'项目地址：{PROJECT_URL}\n\n'
             '所有文档处理均在本地完成，不上传、不收集任何数据。\n'
             '处理结果仅供参考，建议人工复核。'
         )
@@ -2024,7 +2026,7 @@ class CustomSettingsDialog(tk.Toplevel):
             title='导出格式',
             defaultextension='.json',
             initialfile=default_name,
-            filetypes=[('公文格式预设', '*.json'), ('所有文件', '*.*')],
+            filetypes=[('文档格式预设', '*.json'), ('所有文件', '*.*')],
             parent=self.dialog,
         )
         if not path:
@@ -2052,7 +2054,7 @@ class CustomSettingsDialog(tk.Toplevel):
 
         path = filedialog.askopenfilename(
             title='导入格式',
-            filetypes=[('公文格式预设', '*.json'), ('所有文件', '*.*')],
+            filetypes=[('文档格式预设', '*.json'), ('所有文件', '*.*')],
             parent=self.dialog,
         )
         if not path:
@@ -4121,7 +4123,8 @@ class ResultPanel(tk.Frame):
 class DocFormatApp:
     def __init__(self, root):
         self.root = root
-        self.root.title(f"公文格式处理工具 v{__version__}")
+        self.root.title(f"{APP_NAME} v{__version__}")
+        self._set_app_icon()
         _init_system_fonts()
         self._set_initial_window_geometry()
         self.root.configure(bg=Theme.BG)
@@ -4143,6 +4146,16 @@ class DocFormatApp:
         self.root._on_file_selected = self._on_file_selected
         self._record_community_startup()
         self.root.after(600, self._maybe_show_community_notice)
+
+    def _set_app_icon(self):
+        """Use the same artwork in the window and packaged desktop application."""
+        try:
+            self._app_icon = tk.PhotoImage(file=str(_resource_path('assets', 'icon.png')))
+            self.root.iconphoto(True, self._app_icon)
+            if os.name == 'nt':
+                self.root.iconbitmap(str(_resource_path('assets', 'icon.ico')))
+        except tk.TclError:
+            pass
 
     def _set_initial_window_geometry(self):
         """让主窗口默认以更宽的工作区打开，同时兼容小屏和高 DPI。"""
@@ -4202,9 +4215,14 @@ class DocFormatApp:
         # ===== 1. 头部 =====
         title_row = tk.Frame(content, bg=Theme.BG)
         title_row.pack(fill='x', pady=(0, Theme.SPACE_MD))
+        if hasattr(self, '_app_icon'):
+            factor = max(1, self._app_icon.width() // ui_px(42))
+            self._header_icon = self._app_icon.subsample(factor)
+            tk.Label(title_row, image=self._header_icon, bg=Theme.BG).pack(
+                side='left', padx=(0, Theme.SPACE_SM))
         tk.Label(
             title_row,
-            text="公文格式处理工具",
+            text=APP_NAME,
             font=get_font(24, 'bold'),
             bg=Theme.BG,
             fg=Theme.TEXT

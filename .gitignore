@@ -31,14 +31,14 @@ Thumbs.db
 *.log
 
 # 用户的本地自定义设置不应再被提交
-# （仓库里保留一份干净的默认值用于源码运行模式，但开发者本地的修改不应进版本控制）
+# 出厂默认值定义在代码里，开发者本地的修改不应进版本控制
 custom_settings.json
 
 # AI API Key 本地配置，包含敏感信息
 ai_settings.json
 ai_glossary.txt
 
-#codeX说让加了一行，但我也不知道加的东西是什么意思
+# macOS 资源分叉文件
 ._*
 
 # P2 GUI 自检的截图产物（prototype/_check_p2_gui.py 运行时生成）
@@ -48,3 +48,11 @@ prototype/_p2_shots/
 prototype/_p3_shots/
 prototype/_e2e_out/
 prototype/_e2e_wt/
+
+# Local caches and credentials
+.pytest_cache/
+.env
+.env.*
+*.pem
+*.key
+*.p12

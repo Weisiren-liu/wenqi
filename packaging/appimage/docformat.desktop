@@ -1,8 +1,10 @@
 [Desktop Entry]
-Name=公文格式处理工具
-Comment=GB/T 9704-2012 公文格式一键修复
-Exec=docformat_linux
-Icon=docformat
+Name=文齐 · WenQi
+Name[en]=WenQi
+Comment=自定义 Word 格式、批量排版与标点修复
+Comment[en]=Customize Word formatting, batch layout, and punctuation repair
+Exec=wenqi_linux
+Icon=wenqi
 Type=Application
 Categories=Office;WordProcessor;
 Terminal=false

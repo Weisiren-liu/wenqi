@@ -5,9 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APPIMAGETOOL_VERSION=1.9.1
 
-BINARY="${1:-$REPO_ROOT/dist/docformat_linux}"
+BINARY="${1:-$REPO_ROOT/dist/wenqi_linux}"
 ICON="${2:-$REPO_ROOT/assets/icon.png}"
-OUTPUT_NAME="${3:-docformat_linux}"
+OUTPUT_NAME="${3:-wenqi_linux}"
 OUTPUT="$REPO_ROOT/dist/${OUTPUT_NAME}.AppImage"
 APPDIR="$(mktemp -d "$REPO_ROOT/dist/appdir.XXXXXX")"
 TOOL_DIR="$(mktemp -d)"
@@ -36,16 +36,16 @@ case "$ARCH_VALUE" in
 esac
 
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
-install -m 755 "$BINARY" "$APPDIR/usr/bin/docformat_linux"
-install -m 644 "$ICON" "$APPDIR/usr/share/icons/hicolor/256x256/apps/docformat.png"
-install -m 644 "$ICON" "$APPDIR/docformat.png"
+install -m 755 "$BINARY" "$APPDIR/usr/bin/wenqi_linux"
+install -m 644 "$ICON" "$APPDIR/usr/share/icons/hicolor/256x256/apps/wenqi.png"
+install -m 644 "$ICON" "$APPDIR/wenqi.png"
 install -m 644 "$SCRIPT_DIR/docformat.desktop" "$APPDIR/docformat.desktop"
 
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
 export PATH="$HERE/usr/bin:$PATH"
-exec "$HERE/usr/bin/docformat_linux" "$@"
+exec "$HERE/usr/bin/wenqi_linux" "$@"
 APPRUN
 chmod 755 "$APPDIR/AppRun"
 

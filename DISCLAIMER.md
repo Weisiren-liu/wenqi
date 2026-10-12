@@ -2,7 +2,7 @@
 
 ## 数据安全
 
-**公文格式处理工具**（docformat-gui）高度重视用户的数据安全和隐私保护：
+**文齐 · WenQi**高度重视用户的数据安全和隐私保护：
 
 1. **完全本地运行：** 本工具的所有文档处理操作均在用户本地设备上完成，不会将文档内容上传至任何服务器或云端。
 2. **无网络通信：** 工具运行过程中不会发起任何网络请求，不收集、不传输、不存储用户的任何数据。
@@ -25,9 +25,8 @@
 
 如有任何关于数据安全或使用问题的疑虑，欢迎通过以下方式联系：
 
-- **GitHub Issues：** https://github.com/KaguraNanaga/docformat-gui/issues
-- **邮件：** legacyofhourai@163.com
+- **GitHub Issues：** [GitHub Issues](https://github.com/Weisiren-liu/wenqi/issues)
 
 ---
 
-*最后更新：2025年*
+*最后更新：2026-10-12*

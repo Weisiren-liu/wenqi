@@ -13,8 +13,8 @@ def test_linux_workflow_builds_appimages():
     assert workflow.count('--add-data "scripts:scripts"') >= 2
     assert workflow.count("squashfs-tools wget git findutils file") == 2
     assert "packaging/appimage/build-appimage.sh" in workflow
-    assert "docformat_linux_amd64.AppImage" in workflow
-    assert "docformat_linux_aarch64.AppImage" in workflow
+    assert "wenqi_linux_amd64.AppImage" in workflow
+    assert "wenqi_linux_aarch64.AppImage" in workflow
 
 
 def test_appimage_builder_uses_a_pinned_tool_release_and_cleans_only_temp_dirs():

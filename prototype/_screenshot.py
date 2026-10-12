@@ -2,7 +2,7 @@
 
 用法：
     python prototype/_screenshot.py out.png                    # 抓原型窗口
-    python prototype/_screenshot.py out.png "公文格式处理工具"   # 抓指定标题的窗口
+    python prototype/_screenshot.py out.png "文齐 · WenQi"   # 抓指定标题的窗口
 """
 import ctypes
 import ctypes.wintypes as wt
