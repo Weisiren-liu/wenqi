@@ -5,7 +5,7 @@
 
 [中文说明](README.md) · [Developer notes](README_DEV.md) · [Issues](https://github.com/Weisiren-liu/wenqi/issues)
 
-WenQi is a local Python / Tkinter utility for formatting Word documents. Start from a custom format or a built-in preset, edit parameters directly in the main window, then apply them to one or multiple documents.
+WenQi is a local utility for formatting Word documents. Its new Liquid Glass desktop interface separates documents from format editing. Start from a custom format or a built-in preset, edit parameters inline, then apply them to one or multiple documents.
 
 ![WenQi main window](assets/screenshot.png)
 
@@ -13,7 +13,7 @@ WenQi is a local Python / Tkinter utility for formatting Word documents. Start f
 
 - Edit fonts, sizes, bold, alignment, indentation, line and paragraph spacing per document element.
 - Choose official-document, academic or legal starting presets; save your own formats. Overrides remain separate from defaults and can be reset by row or in full.
-- Configure margins, page numbers, tables and cleanup options in advanced settings.
+- Edit paragraph, page, table and cleanup parameters in separate tabs, with automatic saving and a format preview.
 - Batch-process files or folders, or create a `.docx` from pasted text.
 - Choose automatic formatting, a diagnostic report, or punctuation repair alone.
 - Apply Chinese typography rules while preserving embedded images and attachment media.
@@ -40,16 +40,16 @@ python -m pip install -r requirements.txt
 python docformat_gui.py
 ```
 
-Linux requires Tk support (for example `python3-tk` on Debian / Ubuntu). Alternatively, use `bash install.sh` to set up an environment and launch the application.
+The new interface uses Edge WebView2 on Windows and the system WKWebView on macOS. Linux needs Tk, GTK / WebKitGTK and PyGObject; install the appropriate system packages and `pywebview[gtk]`. Alternatively, use `bash install.sh` to set up an environment and launch the application.
 
-All platforms support `.docx` without Microsoft Word. Windows can additionally convert `.doc` / `.wps` through locally installed Microsoft Office or WPS Office. On macOS / Linux, convert those formats first. Install the selected fonts for consistent results. Drag-and-drop requires `tkinterdnd2` and is currently disabled in packaged macOS builds.
+All platforms support `.docx` without Microsoft Word. Windows can additionally convert `.doc` / `.wps` through locally installed Microsoft Office or WPS Office. On macOS / Linux, convert those formats first. Install the selected fonts for consistent results. The new interface uses native browser file drops. Python 3.8 / Windows 7 builds retain the Tk interface and `tkinterdnd2` support.
 
 ## Workflow
 
 1. Select files and an output location.
-2. Choose a starting format and edit parameters; open advanced settings for other options.
+2. Choose a starting format and edit parameters in the Format workspace.
 3. Select a processing mode and start.
-4. Review the output. Default output is a sibling file with a `_processed` suffix.
+4. Review and open the output from the result panel. Default output is a sibling file with a `_processed` suffix; existing outputs receive a numeric suffix.
 
 Saved formats and overrides persist between launches. The historical `DocFormatter` configuration directory is retained for compatibility; see [developer notes](README_DEV.md).
 

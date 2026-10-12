@@ -34,9 +34,21 @@
 
 ## Tkinter
 
-- **用途：** 图形用户界面
+- **用途：** Python 3.8 / Windows 7 兼容界面、历史配置与预设编辑模型
 - **许可证：** Python Software Foundation License (PSF-2.0)
 - **说明：** Python 标准库组件，基于 Tcl/Tk
+
+## pywebview
+
+- **用途：** 液态玻璃界面的本地桌面窗口、浏览器渲染与 Python 桥接
+- **许可证：** BSD-3-Clause
+- **项目地址：** https://github.com/r0x0r/pywebview
+
+## pythonnet / clr-loader
+
+- **用途：** Windows WebView2 的 .NET 桥接（pywebview 的依赖）
+- **许可证：** MIT License
+- **项目地址：** https://github.com/pythonnet/pythonnet、https://github.com/pythonnet/clr-loader
 
 ---
 

@@ -2,3 +2,5 @@ python-docx>=0.8.11
 pywin32>=305; sys_platform == 'win32'
 # 文件拖拽支持（默认安装）
 tkinterdnd2>=0.3.0; python_version >= '3.9'
+# 液态玻璃桌面界面；Windows 使用 Edge WebView2，macOS 使用 WKWebView
+pywebview>=6.0,<7; python_version >= '3.9'

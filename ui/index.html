@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';">
+  <title>文齐</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="svg-definitions" aria-hidden="true"><defs>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l3 3h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 2 9M3 4v6h6"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 3 4v16c2-1 6-1 9 1 3-2 7-2 9-1V4c-2-1-6-1-9 1Zm0 0v16"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v17M6 21h12M4 7h16M6 7l-4 8h8Zm12 0-4 8h8Z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m16 3 5 5-12 12-6 1 1-6ZM13 6l5 5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6Z"/></symbol>
+  </defs></svg>
+  <div id="app" class="app">
+    <div class="atmosphere" aria-hidden="true"><div class="ribbon ribbon-one"></div><div class="ribbon ribbon-two"></div><div class="ribbon ribbon-three"></div></div>
+    <header class="titlebar pywebview-drag-region">
+      <div class="wordmark"><svg class="icon brand-icon"><use href="#i-file"/></svg><span>文齐</span></div>
+      <nav class="view-switch glass" aria-label="工作区">
+        <span class="switch-lens" aria-hidden="true"></span>
+        <button class="active" data-view="documents" aria-selected="true">文档</button>
+        <button data-view="format" aria-selected="false">格式</button>
+      </nav>
+      <div class="title-actions">
+        <button id="app-menu-toggle" class="icon-button" title="更多" aria-label="更多选项" aria-expanded="false"><svg class="icon"><use href="#i-more"/></svg></button>
+        <span class="title-separator"></span>
+        <button class="window-button" data-window="minimize" aria-label="最小化"><svg viewBox="0 0 16 16"><path d="M3 8h10"/></svg></button>
+        <button class="window-button" data-window="maximize" aria-label="最大化或还原"><svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9" rx="1"/></svg></button>
+        <button class="window-button close-window" data-window="close" aria-label="关闭"><svg viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
+      </div>
+    </header>
+    <div id="app-menu" class="popover glass" hidden>
+      <button data-action="logs">运行日志</button>
+      <button data-action="import-preset">导入格式</button>
+      <button data-action="export-preset">导出当前格式</button>
+      <div class="menu-divider"></div>
+      <button data-action="about">关于文齐</button>
+    </div>
+    <main id="documents-view" class="document-workspace">
+      <section class="workbench" aria-label="文档处理">
+        <div class="section-heading"><h1>文档</h1><button id="clear-files" class="text-button" hidden>清空</button></div>
+        <section id="drop-zone" class="document-surface glass" aria-label="拖拽文档到这里">
+          <div id="empty-state" class="empty-state">
+            <div class="document-object" aria-hidden="true"><span class="page-fold"></span><span class="paper-line long"></span><span class="paper-line"></span><span class="paper-line short"></span><span class="paper-line"></span><span class="paper-line short"></span></div>
+            <h2>把文档拖到这里</h2><p>或从电脑中选择 Word 文档</p>
+            <button id="choose-files" class="button glass add-button"><svg class="icon"><use href="#i-plus"/></svg>添加文档</button>
+          </div>
+          <div id="file-state" class="file-state" hidden><div class="file-state-heading"><span id="file-count">已添加文档</span><button id="add-more" class="icon-button glass" aria-label="继续添加文档"><svg class="icon"><use href="#i-plus"/></svg></button></div><div id="file-list" class="file-list"></div></div>
+          <div class="document-tools"><button id="choose-folder" class="quiet-button"><svg class="icon"><use href="#i-folder"/></svg>选择文件夹</button><span></span><button id="paste-text" class="quiet-button"><svg class="icon"><use href="#i-text"/></svg>粘贴文本</button></div>
+          <div class="drop-overlay"><svg class="icon"><use href="#i-plus"/></svg><span>松开以添加文档</span></div>
+        </section>
+        <section class="processing-options" aria-label="处理选项">
+          <div class="option-heading"><span>处理方式</span></div>
+          <div id="mode-switch" class="segmented glass" role="group" aria-label="处理方式"><span class="segment-lens"></span><button class="active" data-mode="smart" aria-pressed="true">智能排版</button><button data-mode="punctuation" aria-pressed="false">仅修标点</button><button data-mode="analyze" aria-pressed="false">格式诊断</button></div>
+          <div class="option-row" id="preset-option"><span class="option-label">使用格式</span><div class="option-control"><div class="select-control"><select id="preset-select" aria-label="使用格式" hidden></select><button type="button" class="select-trigger" role="combobox" aria-label="使用格式" aria-haspopup="listbox" aria-expanded="false" aria-controls="select-picker"><span></span><svg class="icon"><use href="#i-down"/></svg></button></div><button id="edit-format" class="icon-button" title="编辑格式" aria-label="编辑格式"><svg class="icon"><use href="#i-sliders"/></svg></button></div></div>
+          <div class="option-row" id="output-option"><span class="option-label">保存到</span><button id="output-location" class="location-button" title="选择保存位置"><span>原文件旁</span><svg class="icon"><use href="#i-chevron"/></svg></button></div>
+          <button id="more-options-toggle" class="disclosure-button" aria-expanded="false">更多选项<svg class="icon"><use href="#i-down"/></svg></button>
+          <div id="more-options" hidden><label class="toggle-row"><span>保留格式修订</span><input id="revision" type="checkbox" role="switch"><span class="toggle"></span></label><label class="toggle-row"><span>完成后打开文件</span><input id="auto-open" type="checkbox" role="switch"><span class="toggle"></span></label></div>
+        </section>
+        <section id="job-panel" class="job-panel glass" aria-live="polite" hidden><div class="job-heading"><span id="job-title"></span><span id="job-percent"></span></div><div class="progress-track"><div id="job-progress"></div></div><p id="job-stage"></p></section>
+        <section id="result-panel" class="result-panel" aria-live="polite" hidden></section>
+      </section>
+      <aside class="preview-stage" aria-label="格式预览">
+        <div class="preview-heading"><span>格式预览</span><span id="preview-source" class="preview-source">示例文档</span></div>
+        <div class="paper-stage"><article id="preview-paper" class="preview-paper"><div id="paper-content" class="paper-content"></div><div id="paper-page-number" class="paper-page-number">— 1 —</div></article></div>
+        <div class="preview-footer"><span id="preview-format-name">自定义格式</span><button class="quiet-button" id="preview-edit">调整格式<svg class="icon"><use href="#i-chevron"/></svg></button></div>
+      </aside>
+    </main>
+    <main id="format-view" class="format-workspace" hidden>
+      <aside class="preset-rail"><div class="section-heading"><h1>格式</h1><button id="import-format" class="icon-button" aria-label="导入格式" title="导入格式"><svg class="icon"><use href="#i-plus"/></svg></button></div><p class="rail-label">起始格式</p><div id="builtin-presets" class="preset-list"></div><div class="custom-preset-heading"><span class="rail-label">我的格式</span><button id="save-format-rail" class="icon-button" aria-label="存为新格式"><svg class="icon"><use href="#i-plus"/></svg></button></div><div id="custom-presets" class="preset-list"></div><p id="no-custom-formats" class="empty-presets">把常用参数存为自己的格式。</p></aside>
+      <section class="format-editor"><div class="editor-heading"><div><h2 id="editor-title">自定义格式</h2><p id="modified-summary">调整参数后自动保存</p></div><div class="editor-actions"><button id="restore-all" class="icon-button" title="恢复当前格式的默认参数" aria-label="恢复默认参数"><svg class="icon"><use href="#i-reset"/></svg></button><button id="preset-menu-toggle" class="icon-button" title="格式操作" aria-label="格式操作"><svg class="icon"><use href="#i-more"/></svg></button></div></div>
+        <div id="preset-menu" class="popover glass preset-menu" hidden><button data-action="save-format">存为新格式</button><button data-action="rename-format">重命名</button><button data-action="export-preset">导出格式</button><button data-action="delete-format" class="danger-text">删除格式</button></div>
+        <nav class="format-tabs" aria-label="格式参数类别"><button class="active" data-category="paragraph">段落</button><button data-category="page">页面</button><button data-category="table">表格</button><button data-category="behavior">处理选项</button></nav>
+        <div id="paragraph-settings" class="category-content"><div class="table-scroller"><table id="element-table"><thead><tr><th>文档元素</th><th>中文字体</th><th>英数字体</th><th>字号</th><th>加粗</th><th>对齐</th><th>缩进 <small>pt</small></th><th>行距 <small>pt</small></th><th>段前 <small>pt</small></th><th>段后 <small>pt</small></th><th></th></tr></thead><tbody></tbody></table></div><div class="table-note"><span>清空参数即可恢复默认值</span><span>单位：磅（pt）</span></div></div>
+        <div id="page-settings" class="category-content settings-form" hidden></div>
+        <div id="table-settings" class="category-content settings-form" hidden></div>
+        <div id="behavior-settings" class="category-content settings-form" hidden></div>
+      </section>
+    </main>
+    <footer class="action-dock glass"><div class="dock-status"><span id="status-dot" class="status-dot"></span><span id="dock-status">等待添加文档</span></div><button id="start-processing" class="button primary-button"><span>开始处理</span><svg class="icon"><use href="#i-arrow"/></svg></button></footer>
+  </div>
+  <div id="modal-backdrop" class="modal-backdrop" hidden><section id="modal" class="modal glass" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-heading"><h2 id="modal-title"></h2><button id="modal-close" class="icon-button" aria-label="关闭面板"><svg class="icon"><use href="#i-close"/></svg></button></header><div id="modal-content"></div><footer id="modal-actions" class="modal-actions"></footer></section></div>
+  <div id="toast" class="toast glass" role="status" hidden><svg class="icon"><use href="#i-alert"/></svg><span></span></div>
+  <div class="resize-handles" aria-hidden="true"><div data-resize="left"></div><div data-resize="right"></div><div data-resize="top"></div><div data-resize="bottom"></div><div data-resize="top-left"></div><div data-resize="top-right"></div><div data-resize="bottom-left"></div><div data-resize="bottom-right"></div></div>
+  <section id="font-picker" class="font-picker picker-popover glass" role="dialog" aria-label="选择字体" hidden>
+    <input id="font-search" type="search" role="combobox" aria-label="搜索字体" aria-autocomplete="list" aria-expanded="true" aria-controls="font-choices" autocomplete="off" maxlength="100" placeholder="搜索字体，或输入字体名称">
+    <div id="font-choices" role="listbox" aria-label="字体列表"></div>
+    <p id="font-hint" role="status"></p>
+  </section>
+  <div id="select-picker" class="picker-popover glass" role="listbox" aria-label="参数选项" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

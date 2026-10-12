@@ -1,5 +1,7 @@
 # 交接说明（下一步从这里开始）
 
+> 2026-10-12 更新：用户要求重做为简约的液态玻璃界面。Python 3.9+ 默认启动 `ui/` + `scripts/desktop_ui.py`；原 Tk 界面留给 Python 3.8 / Win7。下面关于 P2 主页面布局和“已锁定设计”的条目是历史记录，新界面以 [LIQUID_GLASS_UI.md](./LIQUID_GLASS_UI.md) 为准。配置注册表与覆盖值语义继续沿用。
+
 > 面向**新对话**。读完这份就能接着干，不需要翻之前的聊天记录。
 > 上位文档是 [`ARCHITECTURE.md`](./ARCHITECTURE.md)，UI 细节与坑在
 > [`../prototype/README.md`](../prototype/README.md)。
@@ -174,7 +176,7 @@ python prototype/_screenshot.py out.png
 |---|---|
 | Python | 3.14.6（`C:\Users\weisi\AppData\Local\Python\bin\python.exe`） |
 | 已装 | python-docx 1.2.0、pywin32 312、lxml、Pillow、PyInstaller 6.21.0、pytest 9.1.1 |
-| 未装 | `tkinterdnd2` —— 拖拽会自动降级为禁用，程序可正常运行 |
+| 拖拽依赖 | 已装 `tkinterdnd2` 0.6.4（tkdnd 2.10.3），已验证运行库加载及事件注册；Windows/Linux 打包会检查依赖及 Tcl/动态库资源，缺失则停止 |
 | 平台 | Windows（Tk 8.6.15，主题 `vista`） |
 
 > `requirements-win7.txt` 锁的是 Python 3.8 环境，与当前 3.14 无关，别混用。

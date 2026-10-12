@@ -114,17 +114,20 @@ def _get_docx_templates_path():
 def _get_tkinterdnd_pyinstaller_args(platform_name):
     """收集 tkinterdnd2 的 tkdnd 运行库，确保打包后拖拽可用。"""
     try:
+        from tkinterdnd2 import TkinterDnD, DND_FILES, COPY
         from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
-    except Exception as e:
-        print(f"  [警告] 无法加载 PyInstaller hook 工具，跳过 tkinterdnd2 资源收集: {e}")
-        return []
-
-    try:
         data_files = collect_data_files("tkinterdnd2")
         dynamic_libs = collect_dynamic_libs("tkinterdnd2")
+        if not any(Path(src).name == "pkgIndex.tcl" for src, _ in data_files):
+            raise RuntimeError("未收集到 tkdnd 的 pkgIndex.tcl 运行库入口")
+        library_suffix = ".dll" if platform_name == "windows" else ".so"
+        if not any(Path(src).suffix == library_suffix for src, _ in data_files + dynamic_libs):
+            raise RuntimeError(f"未收集到 tkdnd 的 {library_suffix} 运行库")
     except Exception as e:
-        print(f"  [警告] 无法收集 tkinterdnd2 资源，拖拽功能在打包版中可能不可用: {e}")
-        return []
+        requirements = "requirements-win7.txt" if sys.version_info < (3, 9) else "requirements.txt"
+        print(f"  [错误] 拖拽依赖或运行库不完整，已停止打包: {e}")
+        print(f"  请用当前 Python 安装依赖: python -m pip install pyinstaller -r {requirements}")
+        return None
 
     sep = ";" if platform_name == "windows" else ":"
     args = ["--hidden-import=tkinterdnd2"]
@@ -137,6 +140,31 @@ def _get_tkinterdnd_pyinstaller_args(platform_name):
     if data_files or dynamic_libs:
         print(f"  ✓ 已收集 tkinterdnd2 资源: data={len(data_files)} binary={len(dynamic_libs)}")
 
+    return args
+
+
+def _get_desktop_ui_pyinstaller_args(platform_name):
+    """Bundle the local interface and native browser bridge; Win7 retains Tk."""
+    if sys.version_info < (3, 9):
+        return []
+    try:
+        import webview
+        if not Path("ui/index.html").is_file():
+            raise RuntimeError("缺少 ui/index.html")
+    except Exception as exc:
+        print(f"  [错误] 新界面依赖不完整，已停止打包: {exc}")
+        print("  请运行: python -m pip install -r requirements.txt")
+        return None
+    sep = ";" if platform_name == "windows" else ":"
+    args = [f"--add-data=ui{sep}ui", "--collect-all=webview"]
+    if platform_name == "windows":
+        args += ["--hidden-import=webview.platforms.winforms",
+                 "--hidden-import=webview.platforms.edgechromium",
+                 "--collect-all=pythonnet", "--collect-all=clr_loader"]
+    elif platform_name == "linux":
+        args += ["--hidden-import=webview.platforms.gtk"]
+    else:
+        args += ["--hidden-import=webview.platforms.cocoa"]
     return args
 
 
@@ -449,6 +477,11 @@ def build_windows():
     # 获取 docx 模板路径
     docx_tpl = _get_docx_templates_path()
     dnd_args = _get_tkinterdnd_pyinstaller_args("windows")
+    if dnd_args is None:
+        return False
+    ui_args = _get_desktop_ui_pyinstaller_args("windows")
+    if ui_args is None:
+        return False
     
     cmd = [
         sys.executable, "-m", "PyInstaller",
@@ -468,7 +501,7 @@ def build_windows():
         "--hidden-import=pywintypes",
         MAIN_SCRIPT
     ]
-    cmd[-1:-1] = dnd_args
+    cmd[-1:-1] = dnd_args + ui_args
     _add_pyinstaller_icon(cmd, WINDOWS_ICON)
     
     print(f"运行: {' '.join(cmd)}")
@@ -498,6 +531,11 @@ def build_linux():
     # 获取 docx 模板路径
     docx_tpl = _get_docx_templates_path()
     dnd_args = _get_tkinterdnd_pyinstaller_args("linux")
+    if dnd_args is None:
+        return False
+    ui_args = _get_desktop_ui_pyinstaller_args("linux")
+    if ui_args is None:
+        return False
     
     cmd = [
         sys.executable, "-m", "PyInstaller",
@@ -512,7 +550,7 @@ def build_linux():
         "--hidden-import=lxml",
         MAIN_SCRIPT
     ]
-    cmd[-1:-1] = dnd_args
+    cmd[-1:-1] = dnd_args + ui_args
     
     print(f"运行: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=False)
@@ -544,6 +582,9 @@ def build_macos():
     
     # 获取 docx 模板路径
     docx_tpl = _get_docx_templates_path()
+    ui_args = _get_desktop_ui_pyinstaller_args("macos")
+    if ui_args is None:
+        return False
     # 注意：macOS 打包版当前默认关闭拖拽（见 docformat_gui._should_enable_drag_drop），
     # 因此不收集 tkdnd 运行库，避免把用不到的二进制打进 .app。
 
@@ -563,6 +604,7 @@ def build_macos():
         "--hidden-import=lxml",
         MAIN_SCRIPT
     ]
+    cmd[-1:-1] = ui_args
     _add_pyinstaller_icon(cmd, MACOS_ICON)
     
     print(f"运行: {' '.join(cmd)}")

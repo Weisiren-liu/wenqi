@@ -5499,8 +5499,8 @@ class DocFormatApp:
         self.log_panel.log(f"应用格式: {preset_label}", 'success')
 
 
-def main():
-    global _DND_AVAILABLE
+def _legacy_main():
+    global _DND_AVAILABLE, _DND_DISABLED_REASON
     _enable_windows_high_dpi()
     
     if _DND_AVAILABLE:
@@ -5511,6 +5511,7 @@ def main():
             # 这里自动降级到普通 Tk，保证程序至少能启动使用。
             print(f"[警告] 拖拽运行库加载失败，已降级为普通模式: {e}")
             _DND_AVAILABLE = False
+            _DND_DISABLED_REASON = f"拖拽运行库加载失败：{e}"
             root = tk.Tk()
     else:
         if getattr(sys, 'frozen', False) and sys.platform == 'darwin':
@@ -5519,6 +5520,15 @@ def main():
     _configure_tk_high_dpi(root)
     app = DocFormatApp(root)
     root.mainloop()
+
+
+def main():
+    """Start the glass desktop UI; retain the Tk shell for Python 3.8 / Win7."""
+    if sys.version_info < (3, 9) or os.environ.get("WENQI_LEGACY_UI") == "1":
+        _legacy_main()
+    else:
+        from scripts.desktop_ui import launch
+        launch()
 
 
 if __name__ == "__main__":
